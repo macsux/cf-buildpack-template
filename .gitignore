@@ -11,7 +11,9 @@
 *.userprefs
 
 # Build results
-src/tools
+/.dotnet
+/tools/*
+!/tools/packages.config
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -260,3 +262,4 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+
