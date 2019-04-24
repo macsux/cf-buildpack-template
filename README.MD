@@ -5,7 +5,6 @@ Buildpacks fall into two categories: supply and final. Supply buildpacks can be 
 ## Requirements
 
 * .NET Core SDK (>=2.0)
-* .NET Framework 4.7 - (Windows only)
 
 ## How to implement
 
