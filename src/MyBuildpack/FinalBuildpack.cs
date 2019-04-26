@@ -2,7 +2,7 @@ using System;
 
 namespace MyBuildpack
 {
-    public abstract class FinalBuildpack : Buildpack
+    public abstract class FinalBuildpack : BuildpackBase
     {
         /// <summary>
         /// Determines the startup command for the app

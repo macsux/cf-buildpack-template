@@ -1,6 +1,6 @@
 namespace MyBuildpack
 {
-    public abstract class SupplyBuildpack : Buildpack
+    public abstract class SupplyBuildpack : BuildpackBase
     {
         protected override int DoRun(string[] args)
         {

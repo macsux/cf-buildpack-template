@@ -1,6 +1,6 @@
 namespace MyBuildpack
 {
-    public abstract class Buildpack
+    public abstract class BuildpackBase
     {
         /// <summary>
         /// Determines if the buildpack is compatible and should be applied to the application being staged 

@@ -1,6 +1,6 @@
 #addin nuget:?package=SharpZipLib&version=1.1.0
 #addin nuget:?package=Cake.Compression&version=0.2.2
-var name = Argument("name","buildpack");
+var name = Argument("name","MyBuildpack");
 var target = Argument("target", "Default");
 var stack = Argument("stack","windows");
 var vMajor = Argument("vmajor","1");
@@ -33,7 +33,7 @@ Task("Package")
 {
   Information("Finalizing buildpack package");
   ZipCompress(publishFolder,System.IO.Path.Combine(publishFolder, $"{name}-{runtime}-{version}.zip"));
-  //System.IO.Directory.Delete(publishFolderBin,true);
+  System.IO.Directory.Delete(publishFolderBin,true);
 });
 
 Task("Publish")
@@ -47,19 +47,22 @@ Task("Publish")
          OutputDirectory = publishFolderBin,
          Runtime = runtime
      };
-  DotNetCorePublish("src/cf-buildpack-template.sln", settings);
+  DotNetCorePublish("src/MyBuildpack.sln", settings);
 });
 
-Task("Clean").Does(() => 
+Task("Clean")
+  .Does(() => 
 {
   if(System.IO.Directory.Exists(publishFolder))
       System.IO.Directory.Delete(publishFolder,true);
   System.IO.Directory.CreateDirectory(publishFolderBin);
 });
 
-Task("CopyHooks").IsDependentOn("Clean").Does(() => 
+Task("CopyHooks")
+  .IsDependentOn("Clean")
+  .Does(() => 
 {
-  foreach(var file in System.IO.Directory.EnumerateFiles("bin"))
+  foreach(var file in System.IO.Directory.EnumerateFiles("scripts"))
   {
     Information(file);
     var target = System.IO.Path.Combine(publishFolderBin, System.IO.Path.GetFileName(file));

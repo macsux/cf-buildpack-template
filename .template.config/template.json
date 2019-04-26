@@ -1,0 +1,26 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Andrew Stakhov",
+    "classifications": [ "Console", "Buildpack" ], 
+    "name": "Cloud Foundry Buildpack Template",
+    "identity": "CloudFoundry.Buildpack",         
+    "groupIdentity":"CloudFoundry",
+    "shortName": "buildpack",                    
+    "tags": {
+      "language": "C#",                         
+      "type":"project"
+    },
+    "sourceName": "MyBuildpack",             
+    "preferNameDirectory":true,
+    "sources": [
+        {
+          "modifiers": [
+            {
+              "exclude": [
+                "tools/Addins/**","tools/Cake.CoreCLR/**","tools/nuget.exe","tools/*.md5sum",".git/**","**/.dotnet/**","publish/**","**/.idea/**","**/.vs/**"
+              ]
+            }
+          ]
+        }
+      ]
+  }

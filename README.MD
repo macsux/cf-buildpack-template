@@ -36,6 +36,9 @@ or
 
 Final output will be placed in `/publish` folder
 
+#### IMPORTANT: 
+If you're compiling for Linux stack, you must run `scripts/fix.sh` on a Linux or mac box before it can be used on cloud foundry. this is necessary to properly repackage zip file with correct file permissions which cannot be set by the regular compression library used by the build script
+
 ## How to use
 
 * Option 1: Upload to Cloud Foundry via `cf create-buildpack` option and reference in manifest by name

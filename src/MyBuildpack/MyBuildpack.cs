@@ -4,10 +4,7 @@ namespace MyBuildpack
 {
     public class MyBuildpack : SupplyBuildpack
     {
-        static int Main(string[] args)
-        {
-            return new MyBuildpack().Run(args);
-        }
+        
         protected override bool Detect(string buildPath)
         {
             return false;

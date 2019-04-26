@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+    <metadata>
+        <id>CloudFoundry.Buildpack.V2</id>
+        <version>1.0</version>
+        <authors>Andrew Stakhov</authors>
+        <owners>Andrew Stakhov</owners>
+        <projectUrl>https://github.com/macsux/cf-buildpack-template</projectUrl>
+        <license type="expression">MIT</license>
+        <iconUrl>https://dtb5pzswcit1e.cloudfront.net/assets/images/product_logos/icon_buildpacks@2x.png</iconUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>Template project for building Cloud Foundry buildpacks in C#</description>
+        <tags>template cloud-foundry buildpack</tags>
+
+    </metadata>
+
+    <files>
+        <file src="**" target="content\" exclude="tools/Addins/**;tools/Cake.CoreCLR/**;tools/nuget.exe;tools/*.md5sum;.git/**;**/.dotnet/**;publish/**;**/.idea/**;**/.vs/**;**/bin/**;**/obj/**;**/*.user;/nuget/**;*.zip" />
+    </files>
+</package>
