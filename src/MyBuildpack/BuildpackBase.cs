@@ -1,3 +1,7 @@
+using System;
+using System.Collections;
+using System.Linq;
+
 namespace MyBuildpack
 {
     public abstract class BuildpackBase
@@ -26,6 +30,15 @@ namespace MyBuildpack
         /// <returns>Status return code</returns>
         public int Run(string[] args)
         {
+            foreach (var arg in args)
+            {
+                Console.WriteLine(arg);
+            }
+
+            foreach (var e in Environment.GetEnvironmentVariables().Cast<DictionaryEntry>())
+            {
+                Console.WriteLine($"{e.Key}: {e.Value}");
+            }
             return DoRun(args);
         }
 

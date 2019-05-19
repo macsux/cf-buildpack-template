@@ -17,7 +17,13 @@
           "modifiers": [
             {
               "exclude": [
-                "tools/Addins/**","tools/Cake.CoreCLR/**","tools/nuget.exe","tools/*.md5sum",".git/**","**/.dotnet/**","publish/**","**/.idea/**","**/.vs/**"
+                ".git/**",
+                "**/.dotnet/**",
+                "artifacts/**",
+                "**/.idea/**",
+                "**/.vs/**",
+                ".tmp/**",
+                "buildpack.nuspec"
               ]
             }
           ]
