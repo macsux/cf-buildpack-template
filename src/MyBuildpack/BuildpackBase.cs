@@ -30,6 +30,19 @@ namespace MyBuildpack
         /// <returns>Status return code</returns>
         public int Run(string[] args)
         {
+            foreach (var arg in args)
+            {
+                Console.WriteLine(arg);
+            }
+
+            if (Convert.ToBoolean(Environment.GetEnvironmentVariable("LOG_ENVIRONMENT_VARIABLES") ?? "false"))
+            {
+                foreach (var e in Environment.GetEnvironmentVariables().Cast<DictionaryEntry>())
+                {
+                    Console.WriteLine($"{e.Key}: {e.Value}");
+                }
+            }
+
             return DoRun(args);
         }
 
