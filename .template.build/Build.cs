@@ -32,7 +32,7 @@ class Build : NukeBuild
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
     [Parameter(("NuGet API Configuration Key"))]
-    readonly string ApiKey;
+    readonly string NugetApiKey;
 
     [Parameter("NuGet source API endpoint")] 
     readonly string NuGetSource = "https://api.nuget.org/v3/index.json";
@@ -48,6 +48,7 @@ class Build : NukeBuild
     AbsolutePath LatestPackage => RootDirectory / ".template.artifacts" / $"{NugetPackageId}.{GitVersion.MajorMinorPatch}.nupkg";
 
     Target Pack => _ => _
+        .Description("Generate template NuGet package")
         .Executes(() =>
         {
             NuGetTasks.NuGetPack(s => s
@@ -60,7 +61,7 @@ class Build : NukeBuild
     Target Release => _ => _
         .Description("Publishes the package to NuGet feed")
         .DependsOn(Pack)
-        .Requires(() => ApiKey)
+        .Requires(() => NugetApiKey)
         .Requires(() => NuGetSource)
         .Requires(() => ShouldPush)
         .Requires(() => ShouldPush.ToLower() == "y" || ShouldPush.ToLower() == "yes")
@@ -70,7 +71,7 @@ class Build : NukeBuild
             NuGetTasks.NuGetPush(s => s
                 .SetSource(NuGetSource)
                 .SetTargetPath(LatestPackage)
-                .SetApiKey(ApiKey));
+                .SetApiKey(NugetApiKey));
             Logger.Block($"Package '{NugetPackageId}' version {GitVersion.MajorMinorPatch} published to {NuGetSource}");
         });
 }
