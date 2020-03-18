@@ -15,14 +15,25 @@ namespace MyBuildpack
         /// Dictionary of environmental variables to be set at runtime before the app starts
         /// </summary>
         protected Dictionary<string,string> EnvironmentalVariables { get; } = new Dictionary<string, string>();
-        public bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+        protected bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
         
         /// <summary>
         /// Determines if the buildpack is compatible and should be applied to the application being staged.
         /// </summary>
         /// <param name="buildPath">Directory path to the application</param>
         /// <returns>True if buildpack should be applied, otherwise false</returns>
-        protected abstract bool Detect(string buildPath);
+        public abstract bool Detect(string buildPath);
+        public abstract void Supply(string buildPath, string cachePath, string depsPath, int index);
+        public abstract void Finalize(string buildPath, string cachePath, string depsPath, int index);
+        public abstract void Release(string buildPath);
+
+        /// <summary>
+        /// Code that will execute during the run stage before the app is started
+        /// </summary>
+        public virtual void PreStartup(string buildPath, string depsPath, int index)
+        {
+        }
+
         /// <summary>
         /// Logic to apply when buildpack is ran.
         /// Note that for <see cref="SupplyBuildpack"/> this will correspond to "bin/supply" lifecycle event, while for <see cref="FinalBuildpack"/> it will be invoked on "bin/finalize"
@@ -32,37 +43,16 @@ namespace MyBuildpack
         /// <param name="depsPath">Directory where dependencies provided by all buildpacks are installed. New dependencies introduced by current buildpack should be stored inside subfolder named with index argument ({depsPath}/{index})</param>
         /// <param name="index">Number that represents the ordinal position of the buildpack</param>
         protected abstract void Apply(string buildPath, string cachePath, string depsPath, int index);
-        
-        /// <summary>
-        /// Code that will execute during the run stage before the app is started
-        /// </summary>
-        protected virtual void PreStartup(string buildPath, string depsPath, int index)
-        {
-        }
 
-        /// <summary>
-        /// Entry point into the buildpack. Should be called from Main method with args
-        /// </summary>
-        /// <param name="args">Args array passed into Main method</param>
-        /// <returns>Status return code</returns>
-        public int Run(string[] args)
-        {
-            return DoRun(args);
-        }
 
-        protected virtual int DoRun(string[] args)
+        public void PreStartup(int index)
         {
-            var command = args[0];
-            switch (command)
-            {
-                case "detect":
-                    return Detect(args[1]) ? 2 : 1;
-                case "prestartup":
-                    PreStartup(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), Environment.GetEnvironmentVariable("DEPS_DIR"), int.Parse(args[1]));
-                    break;
-            }
-
-            return 0;
+            var appHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                appHome = Path.Combine(appHome, "app");
+            PreStartup(appHome, Environment.GetEnvironmentVariable("DEPS_DIR"), index);
+            var profiled = Path.Combine(appHome, ".profile.d");
+            InstallStartupEnvVars(profiled, index, true);
         }
         protected void DoApply(string buildPath, string cachePath, string depsPath, int index)
         {
@@ -94,23 +84,41 @@ namespace MyBuildpack
                 {
                     File.WriteAllText(Path.Combine(profiled,$"{startupScriptName}.bat"),$@"%DEPS_DIR%\{index}\{prestartCommand} {index}");
                 }
+                InstallStartupEnvVars(profiled, index, false);
+                GetEnvScriptFile(profiled, index, true); // causes empty env file to be created so it can (potentially) be populated with vars during onstart hook
             }
-
+            
+        }
+        private string GetEnvScriptFile(string profiled, int index, bool isPreStart)
+        {
+            var prefix = isPreStart ? "z" : string.Empty;
+            var suffix = IsLinux ? ".sh" : ".bat";
+            var envScriptName = Path.Combine(profiled, $"{prefix}{index:00}_{nameof(MyBuildpack)}_env{suffix}");
+            // ensure it's initialized
+            if(!File.Exists(envScriptName))
+                File.WriteAllText(envScriptName, string.Empty);
+            return envScriptName;
+        }
+        protected void InstallStartupEnvVars(string profiled, int index, bool isPreStart)
+        {
+            var envScriptName = GetEnvScriptFile(profiled, index, isPreStart);
+            
             if (EnvironmentalVariables.Any())
             {
-                var envScriptName = $"{index:00}_{nameof(MyBuildpack)}_env";
                 if (IsLinux)
                 {
-                    var envVars = EnvironmentalVariables.Aggregate(new StringBuilder(), (sb,x) => sb.Append($"export {x.Key}={x.Value}\n"));
-                    File.WriteAllText(Path.Combine(profiled,$"{envScriptName}.sh"), $"#!/bin/bash\n{envVars}");
+                    var envVars = EnvironmentalVariables.Aggregate(new StringBuilder(), (sb,x) => sb.Append($"export {x.Key}={Escape(x.Value)}\n"));
+                    File.WriteAllText(envScriptName, $"#!/bin/bash\n{envVars}");
                 }
                 else
                 {
                     var envVars = EnvironmentalVariables.Aggregate(new StringBuilder(), (sb,x) => sb.Append($"SET {x.Key}={x.Value}\r\n"));
-                    File.WriteAllText(Path.Combine(profiled,$"{envScriptName}.bat"),envVars.ToString());
+                    File.WriteAllText(envScriptName,envVars.ToString());
                 }
             }
             
         }
+
+        private static string Escape(string value) => $"\"{value.Replace("\"", "\\\"")}\"";
     }
 }

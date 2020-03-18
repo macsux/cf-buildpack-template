@@ -5,9 +5,9 @@ namespace MyBuildpack
 {
     public class MyBuildpack : FinalBuildpack //SupplyBuildpack 
     {
-        protected override bool Detect(string buildPath)
+        public override bool Detect(string buildPath)
         {
-            return true;
+            return false;
         }
 
         protected override void Apply(string buildPath, string cachePath, string depsPath, int index)
@@ -16,13 +16,14 @@ namespace MyBuildpack
             
             Console.WriteLine($"===Applying {nameof(MyBuildpack)}===");
             
-            EnvironmentalVariables["MY_SETTING"] = "value"; // set any runtime environmental variables
+            EnvironmentalVariables["MY_SETTING"] = "value"; // set any environmental variables for the app (staging phase)
             
         }
 /*
         protected override void PreStartup(string buildPath, string depsPath, int index)
         {
             Console.WriteLine("Application is about to start...");
+            EnvironmentalVariables["MY_SETTING"] = "value"; // can set env vars before app starts running
         }
 */
         public override string GetStartupCommand(string buildPath)

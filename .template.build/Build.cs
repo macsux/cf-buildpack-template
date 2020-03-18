@@ -1,18 +1,11 @@
-using System;
 using System.IO;
-using System.Linq;
-using Microsoft.Build.Tasks;
 using Nuke.Common;
 using Nuke.Common.Execution;
 using Nuke.Common.Git;
-using Nuke.Common.ProjectModel;
-using Nuke.Common.Tooling;
+using Nuke.Common.IO;
 using Nuke.Common.Tools.GitVersion;
 using Nuke.Common.Tools.NuGet;
-using Nuke.Common.Utilities.Collections;
-using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.FileSystemTasks;
-using static Nuke.Common.IO.PathConstruction;
 
 [UnsetVisualStudioEnvironmentVariables]
 class Build : NukeBuild
@@ -51,11 +44,15 @@ class Build : NukeBuild
         .Description("Generate template NuGet package")
         .Executes(() =>
         {
+            // if dir is empty it causes nuget ignore to glitch out and create folder in output, throw a dummy file in there
+            var markerFile = ArtifactsDirectory / "OK";
+            File.WriteAllText(markerFile, string.Empty); 
             NuGetTasks.NuGetPack(s => s
                 .SetTargetPath(RootDirectory / "buildpack.nuspec")
                 .SetNoDefaultExcludes(true)
                 .SetVersion(GitVersion.MajorMinorPatch)
                 .SetOutputDirectory(ArtifactsDirectory));
+            File.Delete(markerFile);
         });
 
     Target Release => _ => _

@@ -5,10 +5,10 @@ namespace Lifecycle.Supply
 {
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
-            var argsWithCommand = new[] {"finalize"}.Union(args).ToArray();
-            new MyBuildpack.MyBuildpack().Run(argsWithCommand);
+            var argsWithCommand = new[] {"Finalize"}.Concat(args).ToArray();
+            return MyBuildpack.Program.Main(argsWithCommand);
         }
     }
 }

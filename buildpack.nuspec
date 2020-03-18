@@ -18,7 +18,7 @@
         <file 
             src="**" 
             target="content\" 
-            exclude=".editorconfig;.template.build/**;.template.config/**;.template.artifacts/**;artifacts/**;.tmp/**;.git/**;**/.dotnet/**;publish/**;**/.idea/**;**/.vs/**;**/bin/**;**/obj/**;**/*.user;/nuget/**;*.zip" />
+            exclude=".editorconfig;.template.build/**;.template.artifacts/**;artifacts/**;.tmp/**;.git/**;**/.dotnet/**;publish/**;**/.idea/**;**/.vs/**;**/bin/**;**/obj/**;**/*.user;/nuget/**;*.zip" />
     </files>
     
 </package>
