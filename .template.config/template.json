@@ -23,7 +23,8 @@
                 "**/.idea/**",
                 "**/.vs/**",
                 ".tmp/**",
-                "buildpack.nuspec"
+                "buildpack.nuspec",
+                "*.DotSettings"
               ]
             }
           ]
