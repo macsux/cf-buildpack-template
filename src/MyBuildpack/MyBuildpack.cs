@@ -1,34 +1,41 @@
 ﻿using System;
 using System.IO;
+using System.Reflection;
 
 namespace MyBuildpack
 {
-    public class MyBuildpack : FinalBuildpack //SupplyBuildpack 
+    public class MyBuildpack : SupplyBuildpack
     {
-        public override bool Detect(string buildPath)
-        {
-            return false;
-        }
-
         protected override void Apply(string buildPath, string cachePath, string depsPath, int index)
         {
-            var myDependenciesDirectory = Path.Combine(depsPath, index.ToString()); // store any runtime dependencies not belonging to the app in this directory
-            
-            Console.WriteLine($"===Applying {nameof(MyBuildpack)}===");
-            
-            EnvironmentalVariables["MY_SETTING"] = "value"; // set any environmental variables for the app (staging phase)
-            
+            var currentBuildpackDir = Path.GetDirectoryName(typeof(MyBuildpack).Assembly.Location);
+            CopyDirectory(Path.Combine(currentBuildpackDir, "..", "lib"), Path.Combine(depsPath, index.ToString()));
         }
-/*
-        protected override void PreStartup(string buildPath, string depsPath, int index)
+        
+        void CopyDirectory(string sourceDirectory, string targetDirectory)
         {
-            Console.WriteLine("Application is about to start...");
-            EnvironmentalVariables["MY_SETTING"] = "value"; // can set env vars before app starts running
-        }
-*/
-        public override string GetStartupCommand(string buildPath)
-        {
-            return "test.exe";
+            void CopyAll(DirectoryInfo source, DirectoryInfo target)
+            {
+                Directory.CreateDirectory(target.FullName);
+
+                // Copy each file into the new directory.
+                foreach (var fi in source.GetFiles())
+                {
+                    fi.CopyTo(Path.Combine(target.FullName, fi.Name), true);
+                }
+
+                // Copy each subdirectory using recursion.
+                foreach (var diSourceSubDir in source.GetDirectories())
+                {
+                    var nextTargetSubDir =
+                        target.CreateSubdirectory(diSourceSubDir.Name);
+                    CopyAll(diSourceSubDir, nextTargetSubDir);
+                }
+            }
+            var diSource = new DirectoryInfo(sourceDirectory);
+            var diTarget = new DirectoryInfo(targetDirectory);
+
+            CopyAll(diSource, diTarget);
         }
     }
 }

@@ -3,9 +3,10 @@ using Nuke.Common;
 using Nuke.Common.Execution;
 using Nuke.Common.Git;
 using Nuke.Common.IO;
-using Nuke.Common.Tools.GitVersion;
+using Nuke.Common.Tools.NerdbankGitVersioning;
 using Nuke.Common.Tools.NuGet;
 using static Nuke.Common.IO.FileSystemTasks;
+using GitVersion = Nuke.Common.Tools.GitVersion.GitVersion;
 
 [UnsetVisualStudioEnvironmentVariables]
 class Build : NukeBuild
@@ -19,7 +20,7 @@ class Build : NukeBuild
     public static int Main () => Execute<Build>(x => x.Pack);
 
     [GitRepository] readonly GitRepository GitRepository;
-    [GitVersion] readonly GitVersion GitVersion;
+    [NerdbankGitVersioning] readonly NerdbankGitVersioning GitVersion;
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
@@ -35,10 +36,10 @@ class Build : NukeBuild
 
     
     readonly AbsolutePath ArtifactsDirectory = RootDirectory / ".template.artifacts";
-    const string NugetPackageId = "CloudFoundry.Buildpack.V2";
+    const string NugetPackageId = "CloudFoundry.Buildpack.V2.HttpModule";
 
     
-    AbsolutePath LatestPackage => RootDirectory / ".template.artifacts" / $"{NugetPackageId}.{GitVersion.MajorMinorPatch}.nupkg";
+    AbsolutePath LatestPackage => RootDirectory / ".template.artifacts" / $"{NugetPackageId}.{GitVersion.NuGetPackageVersion}.nupkg";
 
     Target Pack => _ => _
         .Description("Generate template NuGet package")
@@ -50,7 +51,7 @@ class Build : NukeBuild
             NuGetTasks.NuGetPack(s => s
                 .SetTargetPath(RootDirectory / "buildpack.nuspec")
                 .SetNoDefaultExcludes(true)
-                .SetVersion(GitVersion.MajorMinorPatch)
+                .SetVersion(GitVersion.NuGetPackageVersion)
                 .SetOutputDirectory(ArtifactsDirectory));
             File.Delete(markerFile);
         });
@@ -69,6 +70,6 @@ class Build : NukeBuild
                 .SetSource(NuGetSource)
                 .SetTargetPath(LatestPackage)
                 .SetApiKey(NugetApiKey));
-            Logger.Block($"Package '{NugetPackageId}' version {GitVersion.MajorMinorPatch} published to {NuGetSource}");
+            Logger.Block($"Package '{NugetPackageId}' version {GitVersion.NuGetPackageVersion} published to {NuGetSource}");
         });
 }

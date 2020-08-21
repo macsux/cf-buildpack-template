@@ -45,26 +45,16 @@ class Build : NukeBuild
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
-    
-    [Parameter("Target CF stack type - 'windows' or 'linux'. Determines buildpack runtime (Framework or Core). Default is both")]
-    readonly StackType Stack = StackType.Windows | StackType.Linux;
-    
+  
     [Parameter("GitHub personal access token with access to the repo")]
     string GitHubToken;
 
     [Parameter("Application directory against which buildpack will be applied")]
     readonly string ApplicationDirectory;
 
-    IEnumerable<PublishTarget> PublishCombinations
-    {
-        get
-        {
-            if (Stack.HasFlag(StackType.Windows))
-                yield return new PublishTarget {Framework = "net472", Runtime = "win-x64"};
-            if (Stack.HasFlag(StackType.Linux))
-                yield return new PublishTarget {Framework = "netcoreapp3.1", Runtime = "linux-x64"};
-        }
-    }
+    readonly string Framework = "net472";
+    readonly string Runtime = "win-x64";
+    
 
     [Solution] readonly Solution Solution;
     [GitRepository] readonly GitRepository GitRepository;
@@ -90,17 +80,12 @@ class Build : NukeBuild
         .Executes(() =>
         {
             
-            Logger.Info(Stack);
             DotNetBuild(s => s
                 .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
-                
                 .SetAssemblyVersion(GitVersion.AssemblySemVer)
                 .SetFileVersion(GitVersion.AssemblySemFileVer)
-                .SetInformationalVersion(GitVersion.InformationalVersion)
-                .CombineWith(PublishCombinations, (c, p) => c
-                    .SetFramework(p.Framework)
-                    .SetRuntime(p.Runtime)));
+                .SetInformationalVersion(GitVersion.InformationalVersion));
         });
     
     Target Publish => _ => _
@@ -108,33 +93,30 @@ class Build : NukeBuild
         .DependsOn(Clean)
         .Executes(() =>
         {
-            foreach (var publishCombination in PublishCombinations)
-            {
-                var framework = publishCombination.Framework;
-                var runtime = publishCombination.Runtime;
-                var packageZipName = GetPackageZipName(runtime);
+            
+                var packageZipName = GetPackageZipName(Runtime);
                 var workDirectory = TemporaryDirectory / "pack";
                 EnsureCleanDirectory(TemporaryDirectory);
                 var buildpackProject = Solution.GetProject(BuildpackProjectName);
                 if(buildpackProject == null)
                     throw new Exception($"Unable to find project called {BuildpackProjectName} in solution {Solution.Name}");
-                var publishDirectory = buildpackProject.Directory / "bin" / Configuration / framework / runtime / "publish";
+                var buildDirectory = buildpackProject.Directory / "bin" / Configuration / Framework / Runtime;
                 var workBinDirectory = workDirectory / "bin";
                 var workLibDirectory = workDirectory / "lib";
 
 
-                DotNetPublish(s => s
-                    .SetProject(Solution)
+                DotNetBuild(s => s
+                    .SetProjectFile(Solution)
                     .SetConfiguration(Configuration)
-                    .SetFramework(framework)
-                    .SetRuntime(runtime)
+                    // .SetFramework(framework)
+                    // .SetRuntime(runtime)
                     .SetAssemblyVersion(GitVersion.AssemblySemVer)
                     .SetFileVersion(GitVersion.AssemblySemFileVer)
                     .SetInformationalVersion(GitVersion.InformationalVersion)
                 );
 
                 var lifecycleBinaries = Solution.GetProjects("Lifecycle*")
-                    .Select(x => x.Directory / "bin" / Configuration / framework / runtime / "publish")
+                    .Select(x => x.Directory / "bin" / Configuration / Framework / Runtime)
                     .SelectMany(x => Directory.GetFiles(x).Where(path => LifecycleHooks.Any(hook => Path.GetFileName(path).StartsWith(hook))));
 
                 foreach (var lifecycleBinary in lifecycleBinaries)
@@ -142,26 +124,70 @@ class Build : NukeBuild
                     CopyFileToDirectory(lifecycleBinary, workBinDirectory, FileExistsPolicy.OverwriteIfNewer);
                 }
                 
-                CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
+                CopyDirectoryRecursively(buildDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
+                CopyLibs(workLibDirectory);
+                File.WriteAllText(workDirectory / "manifest.yml", "stack: windows");
+                
                 var tempZipFile = TemporaryDirectory / packageZipName;
 
                 ZipFile.CreateFromDirectory(workDirectory, tempZipFile, CompressionLevel.NoCompression, false);
-                MakeFilesInZipUnixExecutable(tempZipFile);
                 CopyFileToDirectory(tempZipFile, ArtifactsDirectory, FileExistsPolicy.Overwrite);
                 Logger.Block(ArtifactsDirectory / packageZipName);
-            }
+            
         });
 
+    void CopyLibs(AbsolutePath libsDir)
+    {
+        var project = Solution.GetProject("MyBuildpackModule");
+        var assemblyName = project.Name;
+        
+        var objFolder = project.Directory / "obj";
+        // map side-by-side assembly loading from libs folder
+        var assetsFile = objFolder / "project.assets.json";
+	    var assetsDoc = JObject.Parse(File.ReadAllText(assetsFile));
+        var referenceAssemblies = assetsDoc["targets"][".NETFramework,Version=v4.7.2"]
+		    .Cast<JProperty>()
+		    .Where(x => x.Value["type"].ToString() == "package")
+		    .SelectMany(item =>
+		    {
+			    var assemblyNameAndVersion = item.Name;
+			    var srcFolder = assetsDoc["libraries"][assemblyNameAndVersion]["path"].ToString();
+                return ((JObject) item.Value["runtime"])
+                    ?.Properties()
+                    .Select(x => Path.Combine(srcFolder, x.Name).Replace('/', Path.DirectorySeparatorChar)) ?? Enumerable.Empty<string>();            })
+            .ToList();
+        var projectDlls = assetsDoc["targets"][".NETFramework,Version=v4.7.2"]
+            .Cast<JProperty>()
+            .Where(x => x.Value["type"].ToString() == "project")
+            .SelectMany(item => ((JObject) item.Value["runtime"]).Properties().Select(x => Path.GetFileName(x.Name)))
+            .ToList();
+
+        var userProfileDir = (AbsolutePath) Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+	    var nugetCache = (AbsolutePath)Environment.GetEnvironmentVariable("NUGET_PACKAGES") ?? userProfileDir / ".nuget" / "packages";
+
+        foreach (var file in referenceAssemblies)
+        {
+            CopyFile(nugetCache / file, libsDir / "libs" / file, FileExistsPolicy.OverwriteIfNewer);
+        }
+        var publishDir = project.Directory / "bin" / Configuration / "net472" / "win-x64" ;
+        foreach (var projectDll in projectDlls)
+        {
+            CopyFile(publishDir / projectDll, libsDir / projectDll, FileExistsPolicy.OverwriteIfNewer);
+        }
+
+        var assemblyFileName = $"{assemblyName}.dll";
+        File.WriteAllText(libsDir / ".httpModule", assemblyFileName);
+        File.Copy(publishDir / assemblyFileName, libsDir / assemblyFileName);
+
+    }
     Target Release => _ => _
         .Description("Creates a GitHub release (or amends existing) and uploads buildpack artifact")
         .DependsOn(Publish)
         .Requires(() => GitHubToken)
         .Executes(async () =>
         {
-            foreach (var publishCombination in PublishCombinations)
-            {
-                var runtime = publishCombination.Runtime;
-                var packageZipName = GetPackageZipName(runtime);
+            
+                var packageZipName = GetPackageZipName(Runtime);
                 if (!GitRepository.IsGitHubRepository())
                     throw new Exception("Only supported when git repo remote is github");
     
@@ -202,7 +228,7 @@ class Build : NukeBuild
                 var releaseAsset = await client.Repository.Release.UploadAsset(release, releaseAssetUpload);
     
                 Logger.Block(releaseAsset.BrowserDownloadUrl);
-            }
+            
         });
 
     Target Detect => _ => _
@@ -216,7 +242,7 @@ class Build : NukeBuild
                     .SetProjectFile(Solution.GetProject("Lifecycle.Detect").Path)
                     .SetApplicationArguments(ApplicationDirectory)
                     .SetConfiguration(Configuration)
-                    .SetFramework("netcoreapp3.1"));
+                    .SetFramework("net472"));
                 Logger.Block("Detect returned 'true'");
             }
             catch (ProcessException)
@@ -241,75 +267,9 @@ class Build : NukeBuild
                 .SetProjectFile(Solution.GetProject("Lifecycle.Supply").Path)
                 .SetApplicationArguments($"{app} {cache} {deps} {index}")
                 .SetConfiguration(Configuration)
-                .SetFramework("netcoreapp3.1"));
+                .SetFramework("net472"));
             Logger.Block($"Buildpack applied. Droplet is available in {home}");
 
         });
 
-    public void MakeFilesInZipUnixExecutable(AbsolutePath zipFile)
-    {
-        var tmpFileName = zipFile + ".tmp";
-        using (var input = new ZipInputStream(File.Open(zipFile, FileMode.Open)))
-        using (var output = new ZipOutputStream(File.Open(tmpFileName, FileMode.Create)))
-        {
-            output.SetLevel(9);
-            ZipEntry entry;
-		
-            while ((entry = input.GetNextEntry()) != null)
-            {
-                var outEntry = new ZipEntry(entry.Name) {HostSystem = (int) HostSystemID.Unix};
-                var entryAttributes =  
-                    ZipEntryAttributes.ReadOwner | 
-                    ZipEntryAttributes.ReadOther | 
-                    ZipEntryAttributes.ReadGroup |
-                    ZipEntryAttributes.ExecuteOwner | 
-                    ZipEntryAttributes.ExecuteOther | 
-                    ZipEntryAttributes.ExecuteGroup;
-                entryAttributes = entryAttributes | (entry.IsDirectory ? ZipEntryAttributes.Directory : ZipEntryAttributes.Regular);
-                outEntry.ExternalFileAttributes = (int) (entryAttributes) << 16; // https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute
-                output.PutNextEntry(outEntry);
-                input.CopyTo(output);
-            }
-            output.Finish();
-            output.Flush();
-        }
-
-        DeleteFile(zipFile);
-        RenameFile(tmpFileName,zipFile, FileExistsPolicy.Overwrite);
-    }
-    
-    [Flags]
-    enum ZipEntryAttributes
-    {
-        ExecuteOther = 1,
-        WriteOther = 2,
-        ReadOther = 4,
-	
-        ExecuteGroup = 8,
-        WriteGroup = 16,
-        ReadGroup = 32,
-
-        ExecuteOwner = 64,
-        WriteOwner = 128,
-        ReadOwner = 256,
-
-        Sticky = 512, // S_ISVTX
-        SetGroupIdOnExecution = 1024,
-        SetUserIdOnExecution = 2048,
-
-        //This is the file type constant of a block-oriented device file.
-        NamedPipe = 4096,
-        CharacterSpecial = 8192,
-        Directory = 16384,
-        Block = 24576,
-        Regular = 32768,
-        SymbolicLink = 40960,
-        Socket = 49152
-	
-    }
-    class PublishTarget
-    {
-        public string Framework { get; set; }
-        public string Runtime { get; set; }
-    }
 }

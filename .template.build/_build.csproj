@@ -11,8 +11,7 @@
   <ItemGroup>
     <PackageReference Include="NuGet.CommandLine" Version="5.4.0" />
     <PackageReference Include="Nuke.Common" Version="0.24.0" />
-    <PackageDownload Include="GitVersion.Tool" Version="[5.1.1]" />
-
+    <PackageDownload Include="nbgv" Version="[3.2.31]" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
     <metadata>
-        <id>CloudFoundry.Buildpack.V2</id>
+        <id>CloudFoundry.Buildpack.V2.HttpModule</id>
         <version>0.0.0</version>
         <authors>Andrew Stakhov</authors>
         <owners>Andrew Stakhov</owners>
@@ -9,7 +9,7 @@
         <license type="expression">MIT</license>
         <iconUrl>https://dtb5pzswcit1e.cloudfront.net/assets/images/product_logos/icon_buildpacks@2x.png</iconUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>Template project for building Cloud Foundry buildpacks in C#</description>
+        <description>Template project for building Cloud Foundry buildpacks in C# that install HttpModule into IIS apps</description>
         <tags>template cloud-foundry buildpack</tags>
 
     </metadata>
@@ -18,7 +18,7 @@
         <file 
             src="**" 
             target="content\" 
-            exclude=".editorconfig;.template.build/**;.template.artifacts/**;artifacts/**;.tmp/**;.git/**;**/.dotnet/**;publish/**;**/.idea/**;**/.vs/**;**/bin/**;**/obj/**;**/*.user;/nuget/**;*.zip" />
+            exclude="version.json;.editorconfig;.template.build/**;.template.artifacts/**;artifacts/**;.tmp/**;.git/**;**/.dotnet/**;publish/**;**/.idea/**;**/.vs/**;**/bin/**;**/obj/**;**/*.user;/nuget/**;*.zip" />
     </files>
     
 </package>
