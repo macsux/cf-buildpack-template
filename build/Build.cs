@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using ICSharpCode.SharpZipLib.Zip;
+using Newtonsoft.Json.Linq;
 using Nuke.Common;
 using Nuke.Common.Execution;
 using Nuke.Common.Git;
@@ -119,6 +120,7 @@ class Build : NukeBuild
                     throw new Exception($"Unable to find project called {BuildpackProjectName} in solution {Solution.Name}");
                 var publishDirectory = buildpackProject.Directory / "bin" / Configuration / framework / runtime / "publish";
                 var workBinDirectory = workDirectory / "bin";
+                var workLibDirectory = workDirectory / "lib";
 
 
                 DotNetPublish(s => s
@@ -139,7 +141,7 @@ class Build : NukeBuild
                 {
                     CopyFileToDirectory(lifecycleBinary, workBinDirectory, FileExistsPolicy.OverwriteIfNewer);
                 }
-
+                
                 CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
                 var tempZipFile = TemporaryDirectory / packageZipName;
 
@@ -149,8 +151,7 @@ class Build : NukeBuild
                 Logger.Block(ArtifactsDirectory / packageZipName);
             }
         });
-    
-    
+
     Target Release => _ => _
         .Description("Creates a GitHub release (or amends existing) and uploads buildpack artifact")
         .DependsOn(Publish)
@@ -238,7 +239,7 @@ class Build : NukeBuild
 
             DotNetRun(s => s
                 .SetProjectFile(Solution.GetProject("Lifecycle.Supply").Path)
-                .SetApplicationArguments($"{app} {cache} {app} {deps} {index}")
+                .SetApplicationArguments($"{app} {cache} {deps} {index}")
                 .SetConfiguration(Configuration)
                 .SetFramework("netcoreapp3.1"));
             Logger.Block($"Buildpack applied. Droplet is available in {home}");
