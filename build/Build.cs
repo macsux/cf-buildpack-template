@@ -15,18 +15,26 @@ using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.GitHub;
 using Nuke.Common.Tools.GitVersion;
+using Nuke.Common.Tools.NerdbankGitVersioning;
 using Nuke.Common.Utilities.Collections;
 using Octokit;
+using Serilog;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using FileMode = System.IO.FileMode;
+using Project = Nuke.Common.ProjectModel.Project;
 using ZipFile = System.IO.Compression.ZipFile;
+// ReSharper disable TemplateIsNotCompileTimeConstantProblem
 
 [assembly: InternalsVisibleTo("MyBuildpackTests")]
-[CheckBuildProjectConfigurations]
 [UnsetVisualStudioEnvironmentVariables]
 class Build : NukeBuild
 {
+    static Build()
+    {
+        Environment.SetEnvironmentVariable("NUKE_TELEMETRY_OPTOUT", "true");
+    }
+
     /// Support plugins are available for:
     ///   - JetBrains ReSharper        https://nuke.build/resharper
     ///   - JetBrains Rider            https://nuke.build/rider
@@ -39,37 +47,34 @@ class Build : NukeBuild
         Windows = 1,
         Linux = 2
     }
+
     public static int Main () => Execute<Build>(x => x.Publish);
     const string BuildpackProjectName = "MyBuildpack";
-    string GetPackageZipName(string runtime) => $"{BuildpackProjectName}-{runtime}-{GitVersion.MajorMinorPatch}.zip";
+    Project BuildpackProject => Solution.GetAllProjects(BuildpackProjectName).Single();
+    string GetPackageZipName(string runtime) => $"{BuildpackProjectName}-{runtime}-{GitVersion.SemVer1}.zip";
 
-    [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
-    readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
-    
     [Parameter("Target CF stack type - 'windows' or 'linux'. Determines buildpack runtime (Framework or Core). Default is both")]
     readonly StackType Stack = StackType.Windows | StackType.Linux;
     
     [Parameter("GitHub personal access token with access to the repo")]
     string GitHubToken;
 
-    [Parameter("Application directory against which buildpack will be applied")]
-    readonly string ApplicationDirectory;
-
     IEnumerable<PublishTarget> PublishCombinations
     {
         get
         {
             if (Stack.HasFlag(StackType.Windows))
-                yield return new PublishTarget {Framework = "net472", Runtime = "win-x64"};
+                yield return new PublishTarget {Framework = "net48", Runtime = "win-x64"};
             if (Stack.HasFlag(StackType.Linux))
-                yield return new PublishTarget {Framework = "netcoreapp3.1", Runtime = "linux-x64"};
+                yield return new PublishTarget {Framework = "net8.0", Runtime = "linux-x64"};
         }
     }
 
     [Solution] readonly Solution Solution;
     [GitRepository] readonly GitRepository GitRepository;
-    [GitVersion] readonly GitVersion GitVersion;
+    [NerdbankGitVersioning(UpdateBuildNumber = true)] readonly NerdbankGitVersioning GitVersion;
 
+    string Configuration = "Debug";
     AbsolutePath SourceDirectory => RootDirectory / "src";
     AbsolutePath TestsDirectory => RootDirectory / "tests";
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
@@ -80,27 +85,8 @@ class Build : NukeBuild
         .Description("Cleans up **/bin and **/obj folders")
         .Executes(() =>
         {
-            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
-            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
-        });
-
-    Target Compile => _ => _
-        .Description("Compiles the buildpack")
-        .DependsOn(Clean)
-        .Executes(() =>
-        {
-            
-            Logger.Info(Stack);
-            DotNetBuild(s => s
-                .SetProjectFile(Solution)
-                .SetConfiguration(Configuration)
-                
-                .SetAssemblyVersion(GitVersion.AssemblySemVer)
-                .SetFileVersion(GitVersion.AssemblySemFileVer)
-                .SetInformationalVersion(GitVersion.InformationalVersion)
-                .CombineWith(PublishCombinations, (c, p) => c
-                    .SetFramework(p.Framework)
-                    .SetRuntime(p.Runtime)));
+            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => x.DeleteDirectory());
+            TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => x.DeleteDirectory());
         });
     
     Target Publish => _ => _
@@ -110,12 +96,13 @@ class Build : NukeBuild
         {
             foreach (var publishCombination in PublishCombinations)
             {
+                var extension = publishCombination.Runtime.StartsWith("win") ? ".exe" : "";
                 var framework = publishCombination.Framework;
                 var runtime = publishCombination.Runtime;
                 var packageZipName = GetPackageZipName(runtime);
                 var workDirectory = TemporaryDirectory / "pack";
-                EnsureCleanDirectory(TemporaryDirectory);
-                var buildpackProject = Solution.GetProject(BuildpackProjectName);
+                workDirectory.CreateOrCleanDirectory();
+                var buildpackProject = Solution.GetAllProjects(BuildpackProjectName).Single();
                 if(buildpackProject == null)
                     throw new Exception($"Unable to find project called {BuildpackProjectName} in solution {Solution.Name}");
                 var publishDirectory = buildpackProject.Directory / "bin" / Configuration / framework / runtime / "publish";
@@ -124,33 +111,87 @@ class Build : NukeBuild
 
 
                 DotNetPublish(s => s
-                    .SetProject(Solution)
+                    .SetProject(BuildpackProject.Path)
                     .SetConfiguration(Configuration)
+                    .EnableSelfContained()
                     .SetFramework(framework)
                     .SetRuntime(runtime)
-                    .SetAssemblyVersion(GitVersion.AssemblySemVer)
-                    .SetFileVersion(GitVersion.AssemblySemFileVer)
-                    .SetInformationalVersion(GitVersion.InformationalVersion)
+                    .SetAssemblyVersion(GitVersion.AssemblyVersion)
+                    .SetFileVersion(GitVersion.AssemblyFileVersion)
+                    .SetInformationalVersion(GitVersion.AssemblyInformationalVersion)
                 );
 
-                var lifecycleBinaries = Solution.GetProjects("Lifecycle*")
-                    .Select(x => x.Directory / "bin" / Configuration / framework / runtime / "publish")
-                    .SelectMany(x => Directory.GetFiles(x).Where(path => LifecycleHooks.Any(hook => Path.GetFileName(path).StartsWith(hook))));
-
-                foreach (var lifecycleBinary in lifecycleBinaries)
+                CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
+                var supplyExecutable = workBinDirectory / $"supply{extension}";
+                RenameFile(workBinDirectory / $"buildpack{extension}", supplyExecutable);
+                if (publishCombination.Runtime.StartsWith("win"))
                 {
-                    CopyFileToDirectory(lifecycleBinary, workBinDirectory, FileExistsPolicy.OverwriteIfNewer);
+                    CopyFile(supplyExecutable, workBinDirectory / "detect.exe");
+                    CopyFile(supplyExecutable, workBinDirectory / "finalize.exe");
+                    CopyFile(supplyExecutable, workBinDirectory / "release.exe");
+                    CopyFile(supplyExecutable, workBinDirectory / "prestartup.exe");
+                }
+                var tempZipFile = TemporaryDirectory / packageZipName;
+                ZipFile.CreateFromDirectory(workDirectory, tempZipFile, CompressionLevel.NoCompression, false);
+                if (publishCombination.Runtime.StartsWith("linux"))
+                {
+                    MakeLinuxBuildpack(tempZipFile);
+                    // MakeFilesInZipUnixExecutable(tempZipFile);
                 }
                 
-                CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
-                var tempZipFile = TemporaryDirectory / packageZipName;
-
-                ZipFile.CreateFromDirectory(workDirectory, tempZipFile, CompressionLevel.NoCompression, false);
-                MakeFilesInZipUnixExecutable(tempZipFile);
-                CopyFileToDirectory(tempZipFile, ArtifactsDirectory, FileExistsPolicy.Overwrite);
-                Logger.Block(ArtifactsDirectory / packageZipName);
+                
+                MoveFileToDirectory(tempZipFile, ArtifactsDirectory, FileExistsPolicy.Overwrite);
+                Log.Information($"Package -> {ArtifactsDirectory / packageZipName}");
             }
         });
+
+    void MakeLinuxBuildpack(AbsolutePath zipFile)
+    {
+        var tmpFileName = zipFile + ".tmp";
+        using (var input = new ZipInputStream(File.Open(zipFile, FileMode.Open)))
+        using (var output = new ZipOutputStream(File.Open(tmpFileName, FileMode.Create)))
+        {
+            output.SetLevel(9);
+            ZipEntry entry;
+            var streamWriter = new StreamWriter(output);
+            void AddSymLink(string name, string originalFile)
+            {
+                var entry = new ZipEntry(name) {HostSystem = (int) HostSystemID.Unix};
+                entry.ExternalFileAttributes = (int)(ZipEntryAttributes.SymbolicLink) << 16;
+                streamWriter.Write(originalFile);
+                output.PutNextEntry(entry);
+            }
+            while ((entry = input.GetNextEntry()) != null)
+            {
+                var outEntry = new ZipEntry(entry.Name) {HostSystem = (int) HostSystemID.Unix};
+                var entryAttributes = entry.IsDirectory ? ZipEntryAttributes.Directory : ZipEntryAttributes.Regular;
+                if (entry.Name == "bin/buildpack")
+                {
+                    outEntry = new ZipEntry("bin/supply");
+                    entryAttributes |= ZipEntryAttributes.ReadOwner |
+                                       ZipEntryAttributes.ReadOther |
+                                       ZipEntryAttributes.ReadGroup |
+                                       ZipEntryAttributes.ExecuteOwner |
+                                       ZipEntryAttributes.ExecuteOther |
+                                       ZipEntryAttributes.ExecuteGroup |
+                                       ZipEntryAttributes.Regular;
+                }
+                outEntry.ExternalFileAttributes = (int)(entryAttributes) << 16; // https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute
+                
+                output.PutNextEntry(outEntry);
+                input.CopyTo(output);
+            }
+            AddSymLink("bin/detect", "bin/supply");
+            AddSymLink("bin/finalize", "bin/supply");
+            AddSymLink("bin/release", "bin/supply");
+            AddSymLink("bin/prestartup", "bin/supply");
+            output.Finish();
+            output.Flush();
+        }
+
+        zipFile.DeleteFile();
+        RenameFile(tmpFileName,zipFile, FileExistsPolicy.Overwrite);
+    }
 
     Target Release => _ => _
         .Description("Creates a GitHub release (or amends existing) and uploads buildpack artifact")
@@ -173,7 +214,7 @@ class Build : NukeBuild
                 var owner = gitIdParts[0];
                 var repoName = gitIdParts[1];
     
-                var releaseName = $"v{GitVersion.MajorMinorPatch}";
+                var releaseName = $"v{GitVersion.SemVer1}";
                 Release release;
                 try
                 {
@@ -201,52 +242,52 @@ class Build : NukeBuild
                 var releaseAssetUpload = new ReleaseAssetUpload(packageZipName, "application/zip", stream, TimeSpan.FromHours(1));
                 var releaseAsset = await client.Repository.Release.UploadAsset(release, releaseAssetUpload);
     
-                Logger.Block(releaseAsset.BrowserDownloadUrl);
+                Log.Information($"Buildpack URL: {releaseAsset.BrowserDownloadUrl}");
             }
         });
 
-    Target Detect => _ => _
-        .Description("Invokes buildpack 'detect' lifecycle event")
-        .Requires(() => ApplicationDirectory)
-        .Executes(() =>
-        {
-            try
-            {
-                DotNetRun(s => s
-                    .SetProjectFile(Solution.GetProject("Lifecycle.Detect").Path)
-                    .SetApplicationArguments(ApplicationDirectory)
-                    .SetConfiguration(Configuration)
-                    .SetFramework("netcoreapp3.1"));
-                Logger.Block("Detect returned 'true'");
-            }
-            catch (ProcessException)
-            {
-                Logger.Block("Detect returned 'false'");
-            }
-        });
+    // Target Detect => _ => _
+    //     .Description("Invokes buildpack 'detect' lifecycle event")
+    //     .Requires(() => ApplicationDirectory)
+    //     .Executes(() =>
+    //     {
+    //         try
+    //         {
+    //             DotNetRun(s => s
+    //                 .SetProjectFile(Solution.GetProject("Lifecycle.Detect").Path)
+    //                 .SetApplicationArguments(ApplicationDirectory)
+    //                 .SetConfiguration(Configuration)
+    //                 .SetFramework("netcoreapp3.1"));
+    //             Logger.Block("Detect returned 'true'");
+    //         }
+    //         catch (ProcessException)
+    //         {
+    //             Logger.Block("Detect returned 'false'");
+    //         }
+    //     });
+    //
+    // Target Supply => _ => _
+    //     .Description("Invokes buildpack 'supply' lifecycle event")
+    //     .Requires(() => ApplicationDirectory)
+    //     .Executes(() =>
+    //     {
+    //         var home = (AbsolutePath)Path.GetTempPath() / Guid.NewGuid().ToString();
+    //         var app = home / "app";
+    //         var deps = home / "deps";
+    //         var index = 0;
+    //         var cache = home / "cache";
+    //         CopyDirectoryRecursively(ApplicationDirectory, app);
+    //
+    //         DotNetRun(s => s
+    //             .SetProjectFile(Solution.GetProject("Lifecycle.Supply").Path)
+    //             .SetApplicationArguments($"{app} {cache} {deps} {index}")
+    //             .SetConfiguration(Configuration)
+    //             .SetFramework("netcoreapp3.1"));
+    //         Logger.Block($"Buildpack applied. Droplet is available in {home}");
+    //
+    //     });
 
-    Target Supply => _ => _
-        .Description("Invokes buildpack 'supply' lifecycle event")
-        .Requires(() => ApplicationDirectory)
-        .Executes(() =>
-        {
-            var home = (AbsolutePath)Path.GetTempPath() / Guid.NewGuid().ToString();
-            var app = home / "app";
-            var deps = home / "deps";
-            var index = 0;
-            var cache = home / "cache";
-            CopyDirectoryRecursively(ApplicationDirectory, app);
-
-            DotNetRun(s => s
-                .SetProjectFile(Solution.GetProject("Lifecycle.Supply").Path)
-                .SetApplicationArguments($"{app} {cache} {deps} {index}")
-                .SetConfiguration(Configuration)
-                .SetFramework("netcoreapp3.1"));
-            Logger.Block($"Buildpack applied. Droplet is available in {home}");
-
-        });
-
-    public void MakeFilesInZipUnixExecutable(AbsolutePath zipFile)
+    void MakeFilesInZipUnixExecutable(AbsolutePath zipFile)
     {
         var tmpFileName = zipFile + ".tmp";
         using (var input = new ZipInputStream(File.Open(zipFile, FileMode.Open)))
@@ -267,6 +308,7 @@ class Build : NukeBuild
                     ZipEntryAttributes.ExecuteGroup;
                 entryAttributes = entryAttributes | (entry.IsDirectory ? ZipEntryAttributes.Directory : ZipEntryAttributes.Regular);
                 outEntry.ExternalFileAttributes = (int) (entryAttributes) << 16; // https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute
+                
                 output.PutNextEntry(outEntry);
                 input.CopyTo(output);
             }
@@ -274,10 +316,13 @@ class Build : NukeBuild
             output.Flush();
         }
 
-        DeleteFile(zipFile);
+        zipFile.DeleteFile();
         RenameFile(tmpFileName,zipFile, FileExistsPolicy.Overwrite);
     }
     
+    
+    // See reference: https://minnie.tuhs.org/cgi-bin/utree.pl?file=4.4BSD/usr/include/sys/stat.h
+    // (values are in octal - use Convert.ToInt32("OCTALNUM", 8) to get values you see below
     [Flags]
     enum ZipEntryAttributes
     {

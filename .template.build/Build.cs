@@ -22,7 +22,7 @@ class Build : NukeBuild
     [GitVersion] readonly GitVersion GitVersion;
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
-    readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
+    readonly string Config = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
     [Parameter(("NuGet API Configuration Key"))]
     readonly string NugetApiKey;
@@ -64,7 +64,8 @@ class Build : NukeBuild
         .Requires(() => ShouldPush.ToLower() == "y" || ShouldPush.ToLower() == "yes")
         .Executes(() =>
         {
-            ControlFlow.Assert(FileExists(LatestPackage), $"{LatestPackage} not found");
+            
+            Assert.True(File.Exists(LatestPackage), $"{LatestPackage} not found");
             NuGetTasks.NuGetPush(s => s
                 .SetSource(NuGetSource)
                 .SetTargetPath(LatestPackage)

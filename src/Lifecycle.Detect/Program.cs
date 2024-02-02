@@ -1,14 +1,14 @@
 ﻿using System;
-using System.Linq;
 
-namespace Lifecycle.Supply
+if (args.Length != 1)
 {
-    class Program
-    {
-        static int Main(string[] args)
-        {
-            var argsWithCommand = new[] {"Detect"}.Concat(args).ToArray();
-            return MyBuildpack.Program.Main(argsWithCommand);
-        }
-    }
+    return PrintHelp();
+}
+var buildPath = args[0];
+return new MyBuildpack.Commands().Detect(buildPath);
+
+static int PrintHelp()
+{
+    Console.WriteLine("Usage: detect <buildpath>");
+    return -1;
 }

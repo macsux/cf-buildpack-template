@@ -1,16 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net472</TargetFrameworks>
-    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
-    <RootNamespace>MyBuildpack</RootNamespace>
-    <AssemblyName>buildpack</AssemblyName>
-    <OutputType>Exe</OutputType>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CommandDotNet" Version="3.0.2" />
-  </ItemGroup>
-    
+    <Import Project="..\Buildpack.props"/>
+    <PropertyGroup>
+        <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+        <RootNamespace>CloudFoundry.Buildpack.V2.MyBuildpack</RootNamespace>
+        <AssemblyName>buildpack</AssemblyName>
+        <OutputType>Exe</OutputType>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <WarningsNotAsErrors>IL2026;IL2104</WarningsNotAsErrors>
+        <LangVersion>latest</LangVersion>
+        <OutputType>Exe</OutputType>
+        <TargetFrameworks>net8.0;net48</TargetFrameworks>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(TargetFramework) != 'net48'">
+        <PublishTrimmed>true</PublishTrimmed>
+        <PublishSingleFile>true</PublishSingleFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Analyzers\CloudFoundry.Buildpack.V2.Analyzers.csproj"
+                          OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Lib\CloudFoundry.Buildpack.V2.Lib.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.133">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
 </Project>

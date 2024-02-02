@@ -1,12 +1,15 @@
-﻿using System.Linq;
+﻿using System;
 
-namespace Lifecycle.Supply
+if (args.Length != 4 && !int.TryParse(args[3], out var index))
 {
-    class Program
-    {
-        static int Main(string[] args)
-        {
-            var argsWithCommand = new[] {"Release"}.Concat(args).ToArray();
-            return MyBuildpack.Program.Main(argsWithCommand);        }
-    }
+    return PrintHelp();
+}
+var buildPath = args[0];
+var commands = new MyBuildpack.Commands();
+commands.Release(buildPath);
+return 0;
+static int PrintHelp()
+{
+    Console.WriteLine("Usage: release <buildpath>");
+    return -1;
 }

@@ -1,34 +1,35 @@
 ﻿using System;
 using System.IO;
 
-namespace MyBuildpack
-{
-    public class MyBuildpack : FinalBuildpack //SupplyBuildpack 
-    {
-        public override bool Detect(string buildPath)
-        {
-            return false;
-        }
+namespace CloudFoundry.Buildpack.V2.MyBuildpack;
 
-        protected override void Apply(string buildPath, string cachePath, string depsPath, int index)
-        {
-            var myDependenciesDirectory = Path.Combine(depsPath, index.ToString()); // store any runtime dependencies not belonging to the app in this directory
+public partial class MyBuildpack : FinalBuildpack //SupplyBuildpack 
+{
+    protected override string? BuildpackVersion => ThisAssembly.AssemblyVersion;
+
+    public override bool Detect(DetectContext context)
+    {
+        return false;
+    }
+
+    protected override void Apply(BuildContext context)
+    {
+        Console.WriteLine($"===Applying {nameof(MyBuildpack)}===");
             
-            Console.WriteLine($"===Applying {nameof(MyBuildpack)}===");
+        EnvironmentalVariables["MY_SETTING"] = "value"; // set any environmental variables for the app (staging phase)
             
-            EnvironmentalVariables["MY_SETTING"] = "value"; // set any environmental variables for the app (staging phase)
-            
-        }
-/*
+    }
+
+
+    /*
         protected override void PreStartup(string buildPath, string depsPath, int index)
         {
             Console.WriteLine("Application is about to start...");
             EnvironmentalVariables["MY_SETTING"] = "value"; // can set env vars before app starts running
         }
 */
-        public override string GetStartupCommand(string buildPath)
-        {
-            return "test.exe";
-        }
+    public override string GetStartupCommand(ReleaseContext buildPath)
+    {
+        return "test.exe";
     }
 }
