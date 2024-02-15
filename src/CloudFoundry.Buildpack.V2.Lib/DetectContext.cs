@@ -36,7 +36,6 @@ public sealed class BuildContext
     public VariablePath CacheDirectory { get; internal set; } = null!;
     public int BuildpackIndex { get; internal set; }
     public VariablePath CurrentDependencyDirectory => DependenciesDirectory / BuildpackIndex.ToString();
-
-   
+    public bool IsFinalize { get; set; }
 }
 

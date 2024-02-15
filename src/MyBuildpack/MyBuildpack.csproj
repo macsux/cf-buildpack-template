@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="..\Buildpack.props"/>
     <PropertyGroup>
         <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
         <RootNamespace>CloudFoundry.Buildpack.V2.MyBuildpack</RootNamespace>
@@ -11,6 +10,7 @@
         <LangVersion>latest</LangVersion>
         <OutputType>Exe</OutputType>
         <TargetFrameworks>net8.0;net48</TargetFrameworks>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     </PropertyGroup>
     <PropertyGroup Condition="$(TargetFramework) != 'net48'">
         <PublishTrimmed>true</PublishTrimmed>
@@ -23,7 +23,7 @@
         <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Lib\CloudFoundry.Buildpack.V2.Lib.csproj" />
     </ItemGroup>
     <ItemGroup>
-      <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.133">
+      <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.48-alpha">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>

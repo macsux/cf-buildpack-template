@@ -3,7 +3,7 @@ using System.CommandLine.Binding;
 
 namespace CloudFoundry.Buildpack.V2.Commands;
 
-public class BuildContextBinder(Argument<string> buildPath, Argument<string> cachePath, Argument<string> depsPath, Argument<int> buildpackIndex) : BinderBase<BuildContext>
+public class BuildContextBinder(Argument<string> buildPath, Argument<string> cachePath, Argument<string> depsPath, Argument<int> buildpackIndex, string hookName) : BinderBase<BuildContext>
 {
     protected override BuildContext GetBoundValue(BindingContext bindingContext)
     {
@@ -13,6 +13,7 @@ public class BuildContextBinder(Argument<string> buildPath, Argument<string> cac
             CacheDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(cachePath)!,
             DependenciesDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(depsPath)!,
             BuildpackIndex = bindingContext.ParseResult.GetValueForArgument(buildpackIndex),
+            IsFinalize = hookName == Lifecycle.Finalize
         };
     }
 }

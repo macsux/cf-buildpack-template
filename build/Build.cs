@@ -4,6 +4,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using ICSharpCode.SharpZipLib.Zip;
 using Newtonsoft.Json.Linq;
 using Nuke.Common;
@@ -63,10 +65,10 @@ class Build : NukeBuild
     {
         get
         {
-            if (Stack.HasFlag(StackType.Windows))
-                yield return new PublishTarget {Framework = "net48", Runtime = "win-x64"};
             if (Stack.HasFlag(StackType.Linux))
                 yield return new PublishTarget {Framework = "net8.0", Runtime = "linux-x64"};
+            if (Stack.HasFlag(StackType.Windows))
+                yield return new PublishTarget {Framework = "net48", Runtime = "win-x64"};
         }
     }
 
@@ -79,7 +81,7 @@ class Build : NukeBuild
     AbsolutePath TestsDirectory => RootDirectory / "tests";
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
     
-    string[] LifecycleHooks = {"detect", "supply", "release", "finalize"};
+    // string[] LifecycleHooks = {"detect", "supply", "release", "finalize"};
 
     Target Clean => _ => _
         .Description("Cleans up **/bin and **/obj folders")
@@ -88,7 +90,34 @@ class Build : NukeBuild
             SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => x.DeleteDirectory());
             TestsDirectory.GlobDirectories("**/bin", "**/obj").ForEach(x => x.DeleteDirectory());
         });
-    
+
+    Target Test => _ => _
+        .Description("Executes builder")
+        .DependsOn(Publish)
+        .Executes(() =>
+        {
+            var artifact = ArtifactsDirectory / GetPackageZipName(EnvironmentInfo.IsWin ? "win-x64" : "linux-x64");
+            var testDir = RootDirectory / ".tmp" / "test";
+            var buildpacksDir = testDir / "buildpacks";
+            var cacheDir = testDir / "cache";
+            var buildDir = testDir / "app";
+            var droplet = testDir / "droplet.tar";
+            var buildpackDir = buildpacksDir / Convert.ToHexString(MD5.HashData(Encoding.ASCII.GetBytes(BuildpackProjectName))).ToLower();
+
+            testDir.CreateOrCleanDirectory();
+            buildpacksDir.CreateDirectory();
+            cacheDir.CreateDirectory();
+            buildDir.CreateDirectory();
+            //dropletDir.CreateDirectory();
+            buildpackDir.CreateDirectory();
+            
+            artifact.UncompressTo(buildpackDir);
+            var process = ProcessTasks.StartProcess(RootDirectory / "lifecycle" / "builder.exe",
+                $"-buildArtifactsCacheDir {cacheDir} -buildDir {buildDir} -buildpacksDir {buildpacksDir} -outputDroplet {droplet} -buildpackOrder {BuildpackProjectName}");
+            process.WaitForExit();
+            //Log.Information(process.Output.StdToText());
+        });
+
     Target Publish => _ => _
         .Description("Packages buildpack in Cloud Foundry expected format into /artifacts directory")
         .DependsOn(Clean)
@@ -105,13 +134,21 @@ class Build : NukeBuild
                 var buildpackProject = Solution.GetAllProjects(BuildpackProjectName).Single();
                 if(buildpackProject == null)
                     throw new Exception($"Unable to find project called {BuildpackProjectName} in solution {Solution.Name}");
+                // string outputPath = ((string)(TemporaryDirectory / "bin" / publishCombination.Runtime)) + Path.DirectorySeparatorChar;
+                //string outputPath = BuildpackProject.Directory / "bin" / Configuration / publishCombination.Runtime)) + Path.DirectorySeparatorChar;
+                //var publishDirectory = (AbsolutePath)outputPath / "publish";
                 var publishDirectory = buildpackProject.Directory / "bin" / Configuration / framework / runtime / "publish";
+
                 var workBinDirectory = workDirectory / "bin";
                 var workLibDirectory = workDirectory / "lib";
 
 
+                // string intermediatePath = ((string)(TemporaryDirectory / "obj" / publishCombination.Runtime)) + Path.DirectorySeparatorChar;
+                
                 DotNetPublish(s => s
                     .SetProject(BuildpackProject.Path)
+                    // .SetProperty("IntermediateOutputPath", intermediatePath)
+                    // .SetProperty("OutputPath", outputPath)
                     .SetConfiguration(Configuration)
                     .EnableSelfContained()
                     .SetFramework(framework)
@@ -124,23 +161,30 @@ class Build : NukeBuild
                 CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
                 var supplyExecutable = workBinDirectory / $"supply{extension}";
                 RenameFile(workBinDirectory / $"buildpack{extension}", supplyExecutable);
+                
                 if (publishCombination.Runtime.StartsWith("win"))
                 {
-                    CopyFile(supplyExecutable, workBinDirectory / "detect.exe");
-                    CopyFile(supplyExecutable, workBinDirectory / "finalize.exe");
-                    CopyFile(supplyExecutable, workBinDirectory / "release.exe");
-                    CopyFile(supplyExecutable, workBinDirectory / "prestartup.exe");
+                    CopyFile(supplyExecutable, workBinDirectory / $"detect{extension}");
+                    CopyFile(supplyExecutable, workBinDirectory / $"finalize{extension}");
+                    CopyFile(supplyExecutable, workBinDirectory / $"release{extension}");
+                    CopyFile(supplyExecutable, workBinDirectory / $"prestartup{extension}");
                 }
+                
                 var tempZipFile = TemporaryDirectory / packageZipName;
+                tempZipFile.DeleteFile();
                 ZipFile.CreateFromDirectory(workDirectory, tempZipFile, CompressionLevel.NoCompression, false);
                 if (publishCombination.Runtime.StartsWith("linux"))
                 {
-                    MakeLinuxBuildpack(tempZipFile);
                     // MakeFilesInZipUnixExecutable(tempZipFile);
+                    MakeLinuxBuildpack(tempZipFile);
+                    // ApplyLinuxPermissionsToZipEntries(tempZipFile);
                 }
                 
-                
                 MoveFileToDirectory(tempZipFile, ArtifactsDirectory, FileExistsPolicy.Overwrite);
+                var latestDir = ArtifactsDirectory / "latest" / runtime;
+                latestDir.CreateOrCleanDirectory();
+                CopyFile(ArtifactsDirectory / tempZipFile.Name, ArtifactsDirectory / "latest" / runtime / "buildpack.zip" , FileExistsPolicy.Overwrite);
+                DotNetRestore(_ => _.SetProjectFile(Solution.Path));
                 Log.Information($"Package -> {ArtifactsDirectory / packageZipName}");
             }
         });
@@ -157,38 +201,47 @@ class Build : NukeBuild
             void AddSymLink(string name, string originalFile)
             {
                 var entry = new ZipEntry(name) {HostSystem = (int) HostSystemID.Unix};
-                entry.ExternalFileAttributes = (int)(ZipEntryAttributes.SymbolicLink) << 16;
-                streamWriter.Write(originalFile);
+                entry.ExternalFileAttributes = (int)(ZipEntryAttributes.SymbolicLink | 
+                                                     ZipEntryAttributes.ReadOwner |
+                                                     ZipEntryAttributes.ReadOther |
+                                                    ZipEntryAttributes.ReadGroup |
+                                                    ZipEntryAttributes.ExecuteOwner |
+                                                    ZipEntryAttributes.ExecuteOther |
+                                                    ZipEntryAttributes.ExecuteGroup ) << 16;
                 output.PutNextEntry(entry);
+                streamWriter.Write(originalFile);
+                streamWriter.Flush();
             }
             while ((entry = input.GetNextEntry()) != null)
             {
                 var outEntry = new ZipEntry(entry.Name) {HostSystem = (int) HostSystemID.Unix};
-                var entryAttributes = entry.IsDirectory ? ZipEntryAttributes.Directory : ZipEntryAttributes.Regular;
-                if (entry.Name == "bin/buildpack")
+                var entryAttributes = ZipEntryAttributes.ReadOwner |
+                                      ZipEntryAttributes.ReadOther |
+                                      ZipEntryAttributes.ReadGroup;
+                // if (entry.Name == "bin/buildpack" || entry.Name == "bin/supply")
+                if (Lifecycle.AllValues.Contains(Path.GetFileNameWithoutExtension(entry.Name)))
                 {
-                    outEntry = new ZipEntry("bin/supply");
-                    entryAttributes |= ZipEntryAttributes.ReadOwner |
-                                       ZipEntryAttributes.ReadOther |
-                                       ZipEntryAttributes.ReadGroup |
-                                       ZipEntryAttributes.ExecuteOwner |
-                                       ZipEntryAttributes.ExecuteOther |
-                                       ZipEntryAttributes.ExecuteGroup |
-                                       ZipEntryAttributes.Regular;
+                    // outEntry = new ZipEntry("bin/supply") {HostSystem = (int) HostSystemID.Unix};
+                    entryAttributes = entryAttributes |
+                                      ZipEntryAttributes.ExecuteOwner |
+                                      ZipEntryAttributes.ExecuteOther |
+                                      ZipEntryAttributes.ExecuteGroup;
                 }
+                entryAttributes = entryAttributes | (entry.IsDirectory ? ZipEntryAttributes.Directory : ZipEntryAttributes.Regular);
                 outEntry.ExternalFileAttributes = (int)(entryAttributes) << 16; // https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute
                 
                 output.PutNextEntry(outEntry);
                 input.CopyTo(output);
             }
-            AddSymLink("bin/detect", "bin/supply");
-            AddSymLink("bin/finalize", "bin/supply");
-            AddSymLink("bin/release", "bin/supply");
-            AddSymLink("bin/prestartup", "bin/supply");
+            AddSymLink("bin/detect", "supply");
+            AddSymLink("bin/finalize", "supply");
+            AddSymLink("bin/release", "supply");
+            AddSymLink("bin/prestartup", "supply");
+            
             output.Finish();
             output.Flush();
         }
-
+    
         zipFile.DeleteFile();
         RenameFile(tmpFileName,zipFile, FileExistsPolicy.Overwrite);
     }
@@ -287,7 +340,44 @@ class Build : NukeBuild
     //
     //     });
 
-    void MakeFilesInZipUnixExecutable(AbsolutePath zipFile)
+    void ApplyLinuxPermissionsToZipEntries(AbsolutePath zipFile)
+    {
+        var tmpFileName = zipFile + ".tmp";
+        using (var input = new ZipInputStream(File.Open(zipFile, FileMode.Open)))
+        using (var output = new ZipOutputStream(File.Open(tmpFileName, FileMode.Create)))
+        {
+            output.SetLevel(9);
+            ZipEntry entry;
+		
+            while ((entry = input.GetNextEntry()) != null)
+            {
+                var outEntry = new ZipEntry(entry.Name) {HostSystem = (int) HostSystemID.Unix};
+                var entryAttributes = 
+                                      ZipEntryAttributes.ReadOwner |
+                                      ZipEntryAttributes.ReadOther |
+                                      ZipEntryAttributes.ReadGroup;
+                if (Lifecycle.AllValues.Contains(Path.GetFileNameWithoutExtension(entry.Name)))
+                {
+                    entryAttributes = entryAttributes |
+                        ZipEntryAttributes.ExecuteOwner |
+                        ZipEntryAttributes.ExecuteOther |
+                        ZipEntryAttributes.ExecuteGroup;
+                }
+
+                entryAttributes = entryAttributes | (entry.IsDirectory ? ZipEntryAttributes.Directory : ZipEntryAttributes.Regular);
+                outEntry.ExternalFileAttributes = (int)(entryAttributes) << 16; // https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute
+                output.PutNextEntry(outEntry);
+                input.CopyTo(output);
+            }
+            output.Finish();
+            output.Flush();
+        }
+
+        zipFile.DeleteFile();
+        RenameFile(tmpFileName,zipFile, FileExistsPolicy.Overwrite);
+    }
+    
+    public void MakeFilesInZipUnixExecutable(AbsolutePath zipFile)
     {
         var tmpFileName = zipFile + ".tmp";
         using (var input = new ZipInputStream(File.Open(zipFile, FileMode.Open)))
@@ -308,7 +398,6 @@ class Build : NukeBuild
                     ZipEntryAttributes.ExecuteGroup;
                 entryAttributes = entryAttributes | (entry.IsDirectory ? ZipEntryAttributes.Directory : ZipEntryAttributes.Regular);
                 outEntry.ExternalFileAttributes = (int) (entryAttributes) << 16; // https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute
-                
                 output.PutNextEntry(outEntry);
                 input.CopyTo(output);
             }
@@ -316,11 +405,9 @@ class Build : NukeBuild
             output.Flush();
         }
 
-        zipFile.DeleteFile();
+        DeleteFile(zipFile);
         RenameFile(tmpFileName,zipFile, FileExistsPolicy.Overwrite);
     }
-    
-    
     // See reference: https://minnie.tuhs.org/cgi-bin/utree.pl?file=4.4BSD/usr/include/sys/stat.h
     // (values are in octal - use Convert.ToInt32("OCTALNUM", 8) to get values you see below
     [Flags]
@@ -356,5 +443,15 @@ class Build : NukeBuild
     {
         public string Framework { get; set; }
         public string Runtime { get; set; }
+    }
+    
+    public static class Lifecycle
+    {
+        public const string Detect = "detect";
+        public const string Release = "release";
+        public const string Supply = "supply";
+        public const string Finalize = "finalize";
+        public const string PreStartup = "prestartup";
+        public static HashSet<string> AllValues { get; } = [..new[] { Detect, Release, Supply, Finalize, PreStartup }];
     }
 }

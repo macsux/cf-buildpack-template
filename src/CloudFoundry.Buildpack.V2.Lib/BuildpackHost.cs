@@ -1,7 +1,10 @@
 ﻿using System.CommandLine;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using CloudFoundry.Buildpack.V2.Commands;
+using NMica.Utils;
 using NMica.Utils.IO;
+#pragma warning disable CS0162 // Unreachable code detected
 
 namespace CloudFoundry.Buildpack.V2;
 
@@ -19,9 +22,25 @@ public class BuildpackHost
     }
     public int Run()
     {
-        var args = Environment.GetCommandLineArgs().ToList().ToArray();
+        var args = EnvironmentHelper.GetCommandLineArgsNative();
+        //Console.WriteLine(string.Join(" ", args));
+        // var args = Environment.GetCommandLineArgs().ToList().ToArray();
+        if (EnvironmentInfo.IsWin && args[0].StartsWith(@"\"))
+        {
+            args[0] = $"c:{args[0]}";
+        }
+        if(!Path.IsPathRooted(args[0]))
+        {
+            args[0] = (AbsolutePath)Directory.GetCurrentDirectory() / args[0];
+        }
+        // Console.WriteLine($"Entry:{Assembly.GetEntryAssembly()?.Location}");
+        // Console.WriteLine("------");
+        
+        // return 0;
         var entrypointExecutable = (AbsolutePath)args[0];
         var hookName = entrypointExecutable.NameWithoutExtension; // try to get hook name from entrypoint executable name (normal execution conditions)
+        args = args.Skip(1).ToArray(); // going forward, remove entrypoint as the first arg
+        // Console.Error.WriteLine($"HookName: {hookName}");
         var appDirectory = new Argument<string>(
             name: "buildPath",
             description: "Directory path to the application");
@@ -34,7 +53,11 @@ public class BuildpackHost
         var buildpackIndex = new Argument<int>(
             name: "index",
             description: "Number that represents the ordinal position of the current buildpack");
+        var profiled = new Argument<string>(
+            name: "profiled",
+            description: "ProfileD location");
         
+        int returnCode = 0;
         Command CreateSupplyCommand(bool rooted)
         {
             var command = rooted ? new RootCommand() : new Command(Lifecycle.Supply, "Provides dependencies for an app");
@@ -42,15 +65,18 @@ public class BuildpackHost
             command.AddArgument(cacheDirectory);
             command.AddArgument(dependenciesDirectory);
             command.AddArgument(buildpackIndex);
-            command.SetHandler(context => _buildpack.Supply(context), new BuildContextBinder(appDirectory, cacheDirectory, dependenciesDirectory, buildpackIndex));
+            command.SetHandler(context => _buildpack.Supply(context), new BuildContextBinder(appDirectory, cacheDirectory, dependenciesDirectory, buildpackIndex, hookName));
             return command;
         }
-
+        
         Command CreateDetectCommand(bool rooted)
         {
             var command = rooted ? new RootCommand() : new Command(Lifecycle.Detect, "Determines whether or not to apply the buildpack to an app");
             command.AddArgument(appDirectory);
-            command.SetHandler(context => _buildpack.Detect(context), new DetectContextBinder(appDirectory));
+            command.SetHandler(context =>
+            {
+                returnCode = _buildpack.Detect(context) ? 0 : 1;
+            }, new DetectContextBinder(appDirectory));
             return command;
         }
         
@@ -61,7 +87,8 @@ public class BuildpackHost
             command.AddArgument(cacheDirectory);
             command.AddArgument(dependenciesDirectory);
             command.AddArgument(buildpackIndex);
-            command.SetHandler(context => _buildpack.Finalize(context), new BuildContextBinder(appDirectory, cacheDirectory, dependenciesDirectory, buildpackIndex));
+            command.AddArgument(profiled);
+            command.SetHandler(context => _buildpack.Finalize(context), new BuildContextBinder(appDirectory, cacheDirectory, dependenciesDirectory, buildpackIndex, hookName));
             return command;
         }
         
@@ -80,11 +107,11 @@ public class BuildpackHost
             command.SetHandler(context => _buildpack.PreStartup(context), new PreStartContextBinder(buildpackIndex));
             return command;
         }
-
+        
         RootCommand rootCommand;
         if (Lifecycle.AllValues.Contains(hookName))
         {
-            args[0] = hookName;
+            // args[0] = hookName;
             rootCommand = hookName switch
             {
                 Lifecycle.Detect => (RootCommand)CreateDetectCommand(true),
@@ -98,7 +125,6 @@ public class BuildpackHost
         else
         {
             // entrypoint is called something else - probably running in debug mode in IDE. in that case, subcommand should be passed as first argument
-            args = args.Skip(1).ToArray();
             rootCommand = new RootCommand();
             rootCommand.AddCommand(CreateDetectCommand(false));
             rootCommand.AddCommand(CreateSupplyCommand(false));
@@ -107,8 +133,14 @@ public class BuildpackHost
             rootCommand.AddCommand(CreatePreStartCommand(false));
         }
         
-        return rootCommand.Invoke(args);
+        
+        var rootCode = rootCommand.Invoke(args);
+        // Console.WriteLine($"Command: {EnvironmentHelper.GetCommandLineArgsNative()[0]}");
+        // Console.WriteLine($"ReturnCode: {returnCode}");
 
+        if (rootCode == 0)
+            return returnCode;
+        return rootCode;
     }
 
 }

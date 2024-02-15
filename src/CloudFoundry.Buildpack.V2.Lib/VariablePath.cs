@@ -19,7 +19,7 @@ public class VariablePath
             return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
         }
 
-        public override object? ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object? value)
+        public override object? ConvertFrom(ITypeDescriptorContext context, CultureInfo? culture, object? value)
         {
             if (value is string stringValue)
             {
@@ -49,20 +49,17 @@ public class VariablePath
         _separator = separator;
     }
 
-    public static explicit operator VariablePath?(string? path)
+    public static explicit operator VariablePath(string path)
     {
-        if (path is null)
-            return null;
-
         return new VariablePath(NormalizePath(path));
     }
 
-    public static implicit operator string?(VariablePath path)
+    public static implicit operator string(VariablePath path)
     {
-        return path?._path;
+        return path._path;
     }
 
-    public static VariablePath operator /(VariablePath left, [CanBeNull] string right)
+    public static VariablePath operator /(VariablePath left, string right)
     {
         var separator = left.NotNull("left != null")._separator;
         return new VariablePath(NormalizePath(Combine(left, (RelativePath) right, separator), separator), separator);

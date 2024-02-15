@@ -36,7 +36,7 @@ public abstract class BuildpackBase
     protected virtual void PrintHeader()
     {
         var versionInfo = BuildpackVersion != null ? $"v.{BuildpackVersion}" : "";
-        Console.WriteLine($"===Applying {nameof(ImplementingClassName)} {versionInfo}===");        
+        Console.WriteLine($"===Applying {ImplementingClassName} {versionInfo}===");        
     }
     /// <summary>
     /// Code that will execute during the run stage before the app is started
@@ -84,7 +84,8 @@ public abstract class BuildpackBase
             var currentAppPath = (AbsolutePath)Environment.GetCommandLineArgs()[0];
             var buildpackFolder = ((AbsolutePath)Environment.GetCommandLineArgs()[0]).Parent ?? throw new Exception("Unable to determine buildpack directory");
             var buildpackFiles = Directory.EnumerateFiles(buildpackFolder)
-                .Cast<AbsolutePath>()
+                .Select(x => (AbsolutePath)x)
+                // .Cast<AbsolutePath>()
                 .Where(x => !Lifecycle.AllValues.Where(l => l != Lifecycle.PreStartup).Contains(x.NameWithoutExtension)) // copy over the prestart assembly
                 .ToList();
             foreach(var file in buildpackFiles)

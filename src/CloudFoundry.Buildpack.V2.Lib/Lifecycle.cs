@@ -7,5 +7,5 @@ public static class Lifecycle
     public const string Supply = "supply";
     public const string Finalize = "finalize";
     public const string PreStartup = "prestartup";
-    public static string[] AllValues { get; } = new[] { Detect, Release, Supply, Finalize, PreStartup };
+    public static string[] AllValues { get; } = { Detect, Release, Supply, Finalize, PreStartup };
 }
