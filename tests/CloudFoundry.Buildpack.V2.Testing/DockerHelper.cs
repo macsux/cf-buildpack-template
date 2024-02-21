@@ -7,12 +7,14 @@ namespace CloudFoundry.Buildpack.V2.Testing;
 
 public class DockerHelper
 {
-    public static void SwitchContainersPlatform(PlatformFamily platformFamily, ITestOutputHelper output = null)
+    public static (string StdOut, string StdErr) SwitchContainersPlatform(ContainerPlatform platformFamily)
     {
+        string stdOut = "";
+        string stdErr = "";
         var arg = platformFamily switch
         {
-            PlatformFamily.Windows => "-SwitchWindowsEngine",
-            PlatformFamily.Linux => "-SwitchLinuxEngine",
+            ContainerPlatform.Windows => "-SwitchWindowsEngine",
+            ContainerPlatform.Linux => "-SwitchLinuxEngine",
             _ => throw new ArgumentOutOfRangeException(nameof(platformFamily), "Only Windows or Linux options are supported")
         };
         if (EnvironmentInfo.IsWin)
@@ -29,10 +31,12 @@ public class DockerHelper
                 CreateNoWindow = true
             };
             var process = Process.Start(processStart);
-            var stdOut = process.StandardOutput.ReadToEnd();
-            var stdErr = process.StandardError.ReadToEnd();
-            output?.WriteLine(stdOut);
-            output?.WriteLine(stdErr);
+            stdOut = process.StandardOutput.ReadToEnd();
+            stdErr = process.StandardError.ReadToEnd();
+            // output?.WriteLine(stdOut);
+            // output?.WriteLine(stdErr);
+            
         }
+        return (stdOut, stdErr);
     } 
 }

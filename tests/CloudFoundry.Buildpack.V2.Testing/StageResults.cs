@@ -11,7 +11,7 @@ public class StageResults : IDisposable
     }
 
     internal List<string> Buildpacks { get; set; } = new();
-    internal AbsolutePath DropletDirectory { get; set; } = null!;
+    public AbsolutePath DropletDirectory { get; set; } = null!;
     public AbsolutePath ApplicationDirectory => DropletDirectory / "app";
     public AbsolutePath DependenciesDirectory => DropletDirectory / "deps";
     public AbsolutePath LogsDirectory => DropletDirectory / "logs";

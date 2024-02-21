@@ -11,7 +11,6 @@ public partial class MyBuildpack : FinalBuildpack //SupplyBuildpack
     {
         Console.WriteLine("Hello world123");
         File.WriteAllText(context.BuildDirectory / "contrib.txt", "test");
-        // Console.WriteLine($"===Applying {nameof(MyBuildpack)}===");
         EnvironmentalVariables["MY_SETTING"] = "value"; // set any environmental variables for the app (staging phase)
     }
     

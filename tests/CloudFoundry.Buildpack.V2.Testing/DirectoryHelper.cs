@@ -12,6 +12,6 @@ public class DirectoryHelper
         ?.FullName);
     public static AbsolutePath RootDirectory => _rootDirectory.Value;
     
-    static internal Lazy<AbsolutePath> _currentAssemblyFolder = new(() => ((AbsolutePath)Assembly.GetExecutingAssembly().Location).Parent);
+    static Lazy<AbsolutePath> _currentAssemblyFolder = new(() => ((AbsolutePath)Assembly.GetExecutingAssembly().Location).Parent);
     static internal AbsolutePath CurrentAssemblyFolder => _currentAssemblyFolder.Value;
 }

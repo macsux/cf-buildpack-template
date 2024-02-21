@@ -2,7 +2,7 @@
 using FluentAssertions.Execution;
 using NMica.Utils.IO;
 
-namespace CloudFoundry.Buildpack.V2.Testing.Assertions;
+namespace FluentAssertions;
 
 public class PathAssertions : PathAssertions<PathAssertions>
 {

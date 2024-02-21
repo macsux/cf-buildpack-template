@@ -41,4 +41,4 @@ fi
 builder="$builder -buildArtifactsCacheDir $tmp/cache -buildDir /home/vcap/app -buildpacksDir $tmp/buildpacks -outputDroplet $tmp/droplet/droplet.tar -buildpackOrder $buildpackOrder"
 echo $builder
 $builder
-tar -xf $tmp/droplet/droplet.tar -C $tmp/droplet
+#tar -xf $tmp/droplet/droplet.tar -C $tmp/droplet

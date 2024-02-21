@@ -2,7 +2,7 @@
 using JetBrains.Annotations;
 using NMica.Utils.IO;
 
-namespace CloudFoundry.Buildpack.V2.Testing.Assertions;
+namespace FluentAssertions;
 
 public static class Extensions
 {
