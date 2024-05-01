@@ -1,6 +1,4 @@
-﻿using System.Collections;
-
-namespace CloudFoundry.Buildpack.V2;
+﻿namespace CloudFoundry.Buildpack.V2;
 
 internal class ContextHelper
 {

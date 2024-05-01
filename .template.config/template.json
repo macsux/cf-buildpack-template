@@ -12,19 +12,37 @@
     },
     "sourceName": "MyBuildpack",             
     "preferNameDirectory":true,
-    "sources": [
+  symbols: {
+    "UsePackages": {
+      datatype: "bool",
+      type: "generated",
+      generator: "constant",
+      parameters: {
+        value: "True"
+      },
+      defaultValue: "True"
+    }
+  },
+  "sources": [
         {
           "modifiers": [
             {
               "exclude": [
                 ".git/**",
+                ".nuke/**",
                 "**/.dotnet/**",
                 "artifacts/**",
                 "**/.idea/**",
                 "**/.vs/**",
                 ".tmp/**",
                 "buildpack.nuspec",
-                "*.DotSettings"
+                ".template.build/**",
+                ".template.artifacts/**",
+                "src/CloudFoundry.Buildpack.V2.Analyzers/**",
+                "src/CloudFoundry.Buildpack.V2.Lib/**",
+                "tests/CloudFoundry.Buildpack.V2.Testing/**",
+                "**/*.DotSettings",
+                "nuget.config"
               ]
             }
           ]

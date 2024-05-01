@@ -1,12 +1,17 @@
 ﻿namespace CloudFoundry.Buildpack.V2.MyBuildpack;
 
-public partial class MyBuildpack : FinalBuildpack //SupplyBuildpack 
+#if(IsSupplyBuildpack)
+    public partial class MyBuildpackBuildpack : SupplyBuildpack
+#else
+public partial class MyBuildpackBuildpack : FinalBuildpack
+#endif
 {
+#if(!IsSupplyBuildpack)
     public override bool Detect(DetectContext context)
     {
         return true;
     }
-
+#endif
     protected override void Apply(BuildContext context)
     {
         Console.WriteLine("Hello world123");
@@ -19,9 +24,15 @@ public partial class MyBuildpack : FinalBuildpack //SupplyBuildpack
         Console.WriteLine("Application is about to start...");
         EnvironmentalVariables["MY_SETTING"] = "value"; // can set env vars before app starts running
     }
-
-    public override string GetStartupCommand(ReleaseContext buildPath)
+#if(!IsSupplyBuildpack)
+    /// <summary>
+    /// Sets the launch command for the container
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public override string GetStartupCommand(ReleaseContext context)
     {
         return "test.exe";
     }
+#endif
 }

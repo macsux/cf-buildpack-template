@@ -1,12 +1,6 @@
-﻿using System.Runtime.CompilerServices;
-using DotNet.Testcontainers.Builders;
+﻿using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
-using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
-using JetBrains.Annotations;
-using NMica.Utils;
-using NMica.Utils.IO;
-using Xunit.Abstractions;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 
@@ -73,13 +67,14 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
         var container = new ContainerBuilder()
             .WithImage(KnownImages.Cflinuxfs4)
             .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
-            .WithCommand("tar", "-xf", "/tmp/droplet/droplet.tar", "-C", "/tmp/droplet")
+            .WithCommand("sh", "-c", "tar -xf /tmp/droplet/droplet.tar -C /tmp/droplet && chown -R vcap /tmp/droplet")
             .Build();
             
         await container.StartAsync(cancellationToken)
             .ConfigureAwait(false);
         try
         {
+            await container.GetExitCodeAsync(cancellationToken);
             var logs = await container.GetLogsAsync(ct: cancellationToken);
             if (!string.IsNullOrEmpty(logs.Stderr))
             {

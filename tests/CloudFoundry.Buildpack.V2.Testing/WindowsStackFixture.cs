@@ -1,12 +1,7 @@
-﻿using System.Runtime.CompilerServices;
-using DotNet.Testcontainers.Builders;
+﻿using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
-using JetBrains.Annotations;
-using NMica.Utils;
-using NMica.Utils.IO;
-using Xunit.Abstractions;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 

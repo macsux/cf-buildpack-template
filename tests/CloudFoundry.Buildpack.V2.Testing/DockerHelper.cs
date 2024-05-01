@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
 using NMica.Utils;
-using NMica.Utils.IO;
-using Xunit.Abstractions;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 
@@ -31,10 +29,8 @@ public class DockerHelper
                 CreateNoWindow = true
             };
             var process = Process.Start(processStart);
-            stdOut = process.StandardOutput.ReadToEnd();
-            stdErr = process.StandardError.ReadToEnd();
-            // output?.WriteLine(stdOut);
-            // output?.WriteLine(stdErr);
+            stdOut = process?.StandardOutput.ReadToEnd() ?? "";
+            stdErr = process?.StandardError.ReadToEnd() ?? "";
             
         }
         return (stdOut, stdErr);

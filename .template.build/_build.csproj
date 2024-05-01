@@ -5,12 +5,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <IsPackable>False</IsPackable>
-    <NoWarn>CS0649;CS0169</NoWarn>
+    <NoWarn>CS0649;CS0169;CS8618</NoWarn>
     <RootNamespace></RootNamespace>
+    <NukeTelemetryVersion>1</NukeTelemetryVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NuGet.CommandLine" Version="6.8.0">
+    <PackageReference Include="NuGet.CommandLine" Version="6.9.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -33,6 +34,12 @@
     <None Include="\appveyor.yml" Condition="Exists('\appveyor.yml')" />
     <None Include="\.travis.yml" Condition="Exists('\.travis.yml')" />
     <None Include="\GitVersion.yml" Condition="Exists('\GitVersion.yml')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\build\SerilogExtensions.cs">
+      <Link>SerilogExtensions.cs</Link>
+    </Compile>
   </ItemGroup>
 
 </Project>

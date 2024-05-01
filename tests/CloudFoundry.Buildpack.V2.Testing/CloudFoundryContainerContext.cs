@@ -1,7 +1,4 @@
-﻿using JetBrains.Annotations;
-using NMica.Utils.IO;
-
-namespace CloudFoundry.Buildpack.V2.Testing;
+﻿namespace CloudFoundry.Buildpack.V2.Testing;
 
 [PublicAPI]
 public class CloudFoundryContainerContext

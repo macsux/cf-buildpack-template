@@ -1,12 +1,7 @@
-﻿using System.Reflection;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Images;
-using JetBrains.Annotations;
-using NMica.Utils.IO;
-using Xunit;
-using Xunit.Abstractions;
 using static DotNet.Testcontainers.Configurations.UnixFileModes;
 
 
@@ -18,6 +13,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
     internal static UnixFileModes ReadPermissions = UserRead | GroupRead | OtherRead;
 
     internal static UnixFileModes ReadAndExecutePermissions = ReadPermissions | UserExecute | GroupExecute | OtherExecute;
+    internal static UnixFileModes ReadWriteAndExecutePermissions = ReadAndExecutePermissions | UserWrite | GroupWrite | OtherWrite;
 
     internal ContainersPlatformFixture(IMessageSink messageSink)
     {
@@ -62,7 +58,8 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
     ContainerBuilder CommonContainerConfigurer(ContainerBuilder builder, CloudFoundryContainerContext context) => builder
         .WithImage(ContainerImage)
         .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
-        .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath())
+        // .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
+        
         .WithEnvironment("CF_STACK", Stack.ToString().ToLowerInvariant());
     
     public virtual async Task<LaunchResult> Launch(LaunchContext context, ITestOutputHelper? output = null, CancellationToken cancellationToken = default)
@@ -81,9 +78,11 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
                 .WithResourceMapping(new FileInfo(context.DropletDirectory / "staging_info.yml"), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions)
                 // .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath())
                 .WithResourceMapping(new DirectoryInfo(context.ProfileDDirectory), (RemoteHome / ".profile.d").AsLinuxPath())
+                .WithBindMount(context.ApplicationDirectory, RemoteHome / "app")
                 .WithBindMount(context.DependenciesDirectory,  RemoteHome / "deps")
                 .WithEnvironment("DEPS_DIR", (RemoteHome / "deps").AsLinuxPath())
                 .WithEnvironment("PORT", "8080")
+                .WithEnvironment("HOME", RemoteHome / "app")
                 .WithWaitStrategy(waitStrategy)
                 .WithPortBinding(8080, 8080)
             
@@ -128,18 +127,19 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         
         FileSystemTasks.EnsureExistingDirectory(context.CacheDirectory);
         FileSystemTasks.EnsureExistingDirectory(context.DropletDirectory);
-        
-        StageCommand.AddRange(context.Buildpacks.Select(x => x.NameWithoutExtension));
+        var stageCommand = new List<string>(StageCommand);
+        stageCommand.AddRange(context.Buildpacks.Select(x => x.NameWithoutExtension));
         if (context.SkipDetect)
         {
-            StageCommand.Add("-skipDetect");
+            stageCommand.Add("-skipDetect");
         }
         containerBuilder = containerBuilder
                 // .WithCloudFoundryTestStack(context.Stack)
-                .WithCommand(StageCommand.ToArray())
+                .WithCommand(stageCommand.ToArray())
                 // .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
                 // .WithResourceMapping(new FileInfo(currentAssemblyFolder / $"stage.{scriptExtension}"), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions)
                 .WithResourceMapping(new DirectoryInfo(context.CacheDirectory), (RemoteTemp / "cache").AsLinuxPath())
+                .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
                 // .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath())
                 .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
             ;

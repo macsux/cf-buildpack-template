@@ -1,8 +1,4 @@
-﻿using FluentAssertions.Streams;
-using JetBrains.Annotations;
-using NMica.Utils.IO;
-
-namespace FluentAssertions;
+﻿namespace FluentAssertions;
 
 public static class Extensions
 {

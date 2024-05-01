@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using ICSharpCode.SharpZipLib.Zip;
-using Newtonsoft.Json.Linq;
 using Nuke.Common;
 using Nuke.Common.Execution;
 using Nuke.Common.Git;
@@ -16,7 +11,6 @@ using Nuke.Common.ProjectModel;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.GitHub;
-using Nuke.Common.Tools.GitVersion;
 using Nuke.Common.Tools.NerdbankGitVersioning;
 using Nuke.Common.Utilities.Collections;
 using Octokit;
@@ -59,7 +53,7 @@ class Build : NukeBuild
     readonly StackType Stack = StackType.Windows | StackType.Linux;
     
     [Parameter("GitHub personal access token with access to the repo")]
-    string GitHubToken;
+    string GitHubToken = null!;
 
     IEnumerable<PublishTarget> PublishCombinations
     {
@@ -72,9 +66,9 @@ class Build : NukeBuild
         }
     }
 
-    [Solution] readonly Solution Solution;
-    [GitRepository] readonly GitRepository GitRepository;
-    [NerdbankGitVersioning(UpdateBuildNumber = true)] readonly NerdbankGitVersioning GitVersion;
+    [Solution] readonly Solution Solution = null!;
+    [GitRepository] readonly GitRepository GitRepository = null!;
+    [NerdbankGitVersioning(UpdateBuildNumber = true)] readonly NerdbankGitVersioning GitVersion = null!;
 
     string Configuration = "Debug";
     AbsolutePath SourceDirectory => RootDirectory / "src";
@@ -118,6 +112,14 @@ class Build : NukeBuild
             //Log.Information(process.Output.StdToText());
         });
 
+    Target Pack => _ => _
+        .Executes(() =>
+        {
+            DotNetPack(c => c
+                .SetProject(Solution)
+                .SetOutputDirectory(ArtifactsDirectory));
+        });
+
     Target Publish => _ => _
         .Description("Packages buildpack in Cloud Foundry expected format into /artifacts directory")
         .DependsOn(Clean)
@@ -158,6 +160,7 @@ class Build : NukeBuild
                     .SetInformationalVersion(GitVersion.AssemblyInformationalVersion)
                 );
 
+
                 CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
                 var supplyExecutable = workBinDirectory / $"supply{extension}";
                 RenameFile(workBinDirectory / $"buildpack{extension}", supplyExecutable);
@@ -184,9 +187,10 @@ class Build : NukeBuild
                 var latestDir = ArtifactsDirectory / "latest" / runtime;
                 latestDir.CreateOrCleanDirectory();
                 CopyFile(ArtifactsDirectory / tempZipFile.Name, ArtifactsDirectory / "latest" / runtime / "buildpack.zip" , FileExistsPolicy.Overwrite);
-                DotNetRestore(_ => _.SetProjectFile(Solution.Path));
+                
                 Log.Information($"Package -> {ArtifactsDirectory / packageZipName}");
             }
+            DotNetRestore(_ => _.SetProjectFile(Solution.Path));
         });
 
     void MakeLinuxBuildpack(AbsolutePath zipFile)
@@ -405,7 +409,7 @@ class Build : NukeBuild
             output.Flush();
         }
 
-        DeleteFile(zipFile);
+        zipFile.DeleteFile();
         RenameFile(tmpFileName,zipFile, FileExistsPolicy.Overwrite);
     }
     // See reference: https://minnie.tuhs.org/cgi-bin/utree.pl?file=4.4BSD/usr/include/sys/stat.h
@@ -439,7 +443,7 @@ class Build : NukeBuild
         Socket = 49152
 	
     }
-    class PublishTarget
+    struct PublishTarget
     {
         public string Framework { get; set; }
         public string Runtime { get; set; }

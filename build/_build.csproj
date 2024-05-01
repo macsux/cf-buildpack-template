@@ -8,6 +8,7 @@
     <IsPackable>False</IsPackable>
     <NoWarn>CS0649;CS0169</NoWarn>
     <NukeTelemetryVersion>1</NukeTelemetryVersion>
+    <RootNamespace></RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,7 +16,6 @@
     <PackageReference Include="Nuke.Common" Version="8.0.0" />
     <PackageReference Include="Octokit" Version="9.1.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
-<!--    <PackageReference Include="SharpZipLib" Version="1.4.2" />-->
   </ItemGroup>
 
   <ItemGroup>

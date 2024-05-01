@@ -1,5 +1,3 @@
-using System;
-
 namespace CloudFoundry.Buildpack.V2;
 
 public abstract class FinalBuildpack : BuildpackBase

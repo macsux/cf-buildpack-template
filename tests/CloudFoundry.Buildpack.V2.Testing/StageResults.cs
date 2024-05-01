@@ -1,6 +1,4 @@
-﻿using NMica.Utils.IO;
-
-namespace CloudFoundry.Buildpack.V2.Testing;
+﻿namespace CloudFoundry.Buildpack.V2.Testing;
 
 public class StageResults : IDisposable
 {

@@ -4,11 +4,12 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-<!--        <WarningsNotAsErrors>IL2026;IL2104</WarningsNotAsErrors>-->
+        <NoWarn>NU5104;CS1998</NoWarn>
+        <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
+        <UsePackages>false</UsePackages>
         <LangVersion>latest</LangVersion>
-<!--        <OutputType>Exe</OutputType>-->
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="JetBrains.Annotations" Version="2022.1.0" />
+        <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
     </ItemGroup>
 </Project>

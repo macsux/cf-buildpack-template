@@ -1,6 +1,4 @@
 ﻿using System.CommandLine;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using CloudFoundry.Buildpack.V2.Commands;
 using NMica.Utils;
 using NMica.Utils.IO;

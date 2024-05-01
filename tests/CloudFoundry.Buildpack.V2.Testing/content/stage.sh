@@ -6,6 +6,7 @@ getBuildpackDir(){
 }
 #echo $@
 #tmp=~/projects/cf-buildpack-template/artifacts/test
+
 tmp=/tmp
 echo $@
 buildpackList=()

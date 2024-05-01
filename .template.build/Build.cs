@@ -5,6 +5,7 @@ using Nuke.Common.Git;
 using Nuke.Common.IO;
 using Nuke.Common.Tools.GitVersion;
 using Nuke.Common.Tools.NuGet;
+using Serilog;
 using static Nuke.Common.IO.FileSystemTasks;
 
 [UnsetVisualStudioEnvironmentVariables]
@@ -45,14 +46,18 @@ class Build : NukeBuild
         .Executes(() =>
         {
             // if dir is empty it causes nuget ignore to glitch out and create folder in output, throw a dummy file in there
+            
             var markerFile = ArtifactsDirectory / "OK";
-            File.WriteAllText(markerFile, string.Empty); 
+            markerFile.TouchFile();
+            // File.WriteAllText(markerFile, string.Empty);
+            
             NuGetTasks.NuGetPack(s => s
                 .SetTargetPath(RootDirectory / "buildpack.nuspec")
                 .SetNoDefaultExcludes(true)
+                .EnableNoPackageAnalysis()
                 .SetVersion(GitVersion.MajorMinorPatch)
                 .SetOutputDirectory(ArtifactsDirectory));
-            File.Delete(markerFile);
+            markerFile.DeleteFile();
         });
 
     Target Release => _ => _
@@ -70,6 +75,6 @@ class Build : NukeBuild
                 .SetSource(NuGetSource)
                 .SetTargetPath(LatestPackage)
                 .SetApiKey(NugetApiKey));
-            Logger.Block($"Package '{NugetPackageId}' version {GitVersion.MajorMinorPatch} published to {NuGetSource}");
+            Log.Logger.Block($"Package '{NugetPackageId}' version {GitVersion.MajorMinorPatch} published to {NuGetSource}");
         });
 }

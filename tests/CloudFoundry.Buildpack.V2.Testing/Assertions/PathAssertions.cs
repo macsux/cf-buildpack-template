@@ -1,6 +1,4 @@
-﻿using FluentAssertions;
-using FluentAssertions.Execution;
-using NMica.Utils.IO;
+﻿using FluentAssertions.Execution;
 
 namespace FluentAssertions;
 

@@ -1,7 +1,6 @@
 $homeDir = "c:\users\vcap"
 $tmp = "$homeDir\appdata\local\temp" 
 #$tmp = "C:\projects\cf-buildpack-template\tests\MyBuildpack.Tests\bin\Debug\net8.0\RunBuilderLinux-8dc2d796adf074c\droplet" 
-
 #$homeDir = "C:\projects\cf-buildpack-template\tests\MyBuildpack.Tests\bin\Debug\net8.0\RunBuilderLinux-8dc2d796adf074c\droplet"
 
 function SourceEnvVarsFromBat {
@@ -20,14 +19,14 @@ function SourceEnvVarsFromBat {
 }
 
 if (Test-Path "$homeDir/.profile.d"){
-    Get-ChildItem "$homeDir/.profile.d" -Filter *.bat | Foreach-Object {
+    Get-ChildItem "$homeDir/.profile.d" -Filter *.bat | where Length -gt 0Kb | Foreach-Object {
         $profileScript = $_.FullName
         SourceEnvVarsFromBat $profileScript
         . $profileScript
     }
 }
 if (Test-Path "$homeDir/app/.profile.d"){
-    Get-ChildItem "$homeDir/app/.profile.d" -Filter *.bat | Foreach-Object {
+    Get-ChildItem "$homeDir/app/.profile.d" -Filter *.bat | where Length -gt 0Kb | Foreach-Object {
         $profileScript = $_.FullName
         SourceEnvVarsFromBat $profileScript
         . $profileScript

@@ -1,15 +1,10 @@
-﻿using JetBrains.Annotations;
-using NMica.Utils.IO;
-
-namespace CloudFoundry.Buildpack.V2.Testing;
+﻿namespace CloudFoundry.Buildpack.V2.Testing;
 
 [PublicAPI]
 public class LaunchContext : CloudFoundryContainerContext
 {
     internal AbsolutePath? RootDirectory { get; set; }
-    // public AbsolutePath? LifecycleDirectory { get; set; }
     public AbsolutePath? DropletDirectory { get; }
-    // public CloudFoundryStack Stack { get; set; }
     public override AbsolutePath ApplicationDirectory => DropletDirectory / "app";
     public AbsolutePath DependenciesDirectory => DropletDirectory / "deps";
     public AbsolutePath ProfileDDirectory => DropletDirectory / "profile.d";
