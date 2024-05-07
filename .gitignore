@@ -6,7 +6,7 @@
 *.user
 *.userosscache
 *.sln.docstates
-lifecycle/**
+
 
 .tmp/**
 .template.artifacts/**
@@ -266,4 +266,5 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+
 
