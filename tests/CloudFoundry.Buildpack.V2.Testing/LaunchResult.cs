@@ -4,12 +4,13 @@ namespace CloudFoundry.Buildpack.V2.Testing;
 
 public class LaunchResult
 {
-    public LaunchResult(IContainer container)
+    public LaunchResult(IContainer container, int hostPort)
     {
         Container = container;
+        HostPort = hostPort;
         HttpClient = new HttpClient
         {
-            BaseAddress = new Uri("http://localhost:8080")
+            BaseAddress = new Uri($"http://localhost:{HostPort}")
         };
         
     }
@@ -17,5 +18,5 @@ public class LaunchResult
 
     public HttpClient HttpClient { get; }
     public IContainer Container { get; }
-    
+    public int HostPort { get; }
 }

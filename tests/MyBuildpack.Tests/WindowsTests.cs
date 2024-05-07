@@ -1,5 +1,5 @@
 ﻿using CloudFoundry.Buildpack.V2.Testing;
-using NMica.Utils.IO;
+using Nuke.Common.IO;
 using static CloudFoundry.Buildpack.V2.Testing.DirectoryHelper;
 
 namespace MyBuildpack.Tests;

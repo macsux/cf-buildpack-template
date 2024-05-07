@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using NMica.Utils;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 

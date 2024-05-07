@@ -1,5 +1,5 @@
 ﻿using System.Reflection;
-using NMica.Utils.Collections;
+using Nuke.Common.Utilities.Collections;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 

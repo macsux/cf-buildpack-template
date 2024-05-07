@@ -16,10 +16,12 @@
     <PackageReference Include="Nuke.Common" Version="8.0.0" />
     <PackageReference Include="Octokit" Version="9.1.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
+    
   </ItemGroup>
 
   <ItemGroup>
-    <NukeSpecificationFiles Include="**\*.json" Exclude="bin\**;obj\**" />
+    <!-- Uncomment below line for custom generation of custom tools -->
+<!--    <NukeSpecificationFiles Include="**\*.json" Exclude="bin\**;obj\**" />-->
     <NukeExternalFiles Include="**\*.*.ext" Exclude="bin\**;obj\**" />
     <None Remove="*.csproj.DotSettings;*.ref.*.txt" />
 
@@ -35,4 +37,16 @@
     <None Include="..\GitVersion.yml" Condition="Exists('..\GitVersion.yml')" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(UsePackages)' == 'false'">
+    <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Build\CloudFoundry.Buildpack.V2.Build.csproj" />
+    <PackageReference Include="NuGet.CommandLine" Version="6.9.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(UsePackages)' == 'true'">
+    <PackageReference Include="CloudFoundry.Buildpack.V2.Build" Version="1.0.0"/>
+  </ItemGroup>
+  
+  
 </Project>

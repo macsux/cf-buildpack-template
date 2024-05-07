@@ -1,7 +1,11 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Net;
+using System.Net.NetworkInformation;
+using System.Runtime.CompilerServices;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Images;
+using Newtonsoft.Json;
+using Nuke.Common.Tooling;
 using static DotNet.Testcontainers.Configurations.UnixFileModes;
 
 
@@ -15,6 +19,8 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
     internal static UnixFileModes ReadAndExecutePermissions = ReadPermissions | UserExecute | GroupExecute | OtherExecute;
     internal static UnixFileModes ReadWriteAndExecutePermissions = ReadAndExecutePermissions | UserWrite | GroupWrite | OtherWrite;
 
+    public Stream? OutputStream { get; set; }
+    
     internal ContainersPlatformFixture(IMessageSink messageSink)
     {
         MessageSink = messageSink;
@@ -26,16 +32,17 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
 
     protected IMessageSink MessageSink { get; set; }
 
+    protected abstract Dictionary<string, string> GetContainerEnvironmentalVariables(CloudFoundryContainerContext context);
+
+
     public StageContext CreateStagingContext(AbsolutePath applicationDirectory, [CallerMemberName] string callingMethod = "test")
     {
         var baseDir = (AbsolutePath)Directory.GetCurrentDirectory() / $"{callingMethod}-{DateTime.Now.Ticks:x}";
         var context = new StageContext
         {
-            RootDirectory = DirectoryHelper.RootDirectory,
             CacheDirectory = baseDir / "cache",
             ApplicationDirectory = applicationDirectory,
             DropletDirectory = baseDir / "droplet",
-            LifecycleDirectory = DirectoryHelper.RootDirectory / "lifecycle",
             Stack = Stack
         };
 
@@ -55,13 +62,38 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
     protected virtual Func<ContainerBuilder, ContainerBuilder> StagingContainerConfigurer => builder => builder;
     protected virtual Func<ContainerBuilder, ContainerBuilder> LaunchingContainerConfigurer => builder => builder;
 
-    ContainerBuilder CommonContainerConfigurer(ContainerBuilder builder, CloudFoundryContainerContext context) => builder
-        .WithImage(ContainerImage)
-        .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
-        // .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
-        
-        .WithEnvironment("CF_STACK", Stack.ToString().ToLowerInvariant());
-    
+    ContainerBuilder CommonContainerConfigurer(ContainerBuilder builder, CloudFoundryContainerContext context)
+    {
+        var envVars = GetContainerEnvironmentalVariables(context);
+        envVars.TryAdd("VCAP_APPLICATION", JsonConvert.SerializeObject(context.VcapApplication, Formatting.Indented));
+        envVars.TryAdd("VCAP_SERVICES", JsonConvert.SerializeObject(context.VcapServices, Formatting.Indented));
+        foreach (var (key, value) in envVars)
+        {
+            builder = builder.WithEnvironment(key, value);
+        }
+        return builder
+            .WithImage(ContainerImage)
+            .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
+            .WithEnvironment("CF_STACK", Stack.ToString().ToLowerInvariant())
+            .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(OutputStream,OutputStream));
+    }
+    bool IsFree(int port)
+    {
+        IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
+        IPEndPoint[] listeners = properties.GetActiveTcpListeners();
+        int[] openPorts = listeners.Select(item => item.Port).ToArray<int>();
+        return openPorts.All(openPort => openPort != port);
+    }
+
+    int NextFreePort(int port = 0)
+    {
+        port = (port > 0) ? port : new Random().Next(4000, 40000);
+        while (!IsFree(port))
+        {
+            port += 1;
+        }
+        return port;
+    }
     public virtual async Task<LaunchResult> Launch(LaunchContext context, ITestOutputHelper? output = null, CancellationToken cancellationToken = default)
     {
         if (cancellationToken == CancellationToken.None)
@@ -69,26 +101,24 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
             cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(120)).Token;
         }
         
-        var containerBuilder = LaunchingContainerConfigurer(CommonContainerConfigurer(new(), context)); 
+        var containerBuilder = LaunchingContainerConfigurer(CommonContainerConfigurer(new(), context));
 
+        var freeHostPort = NextFreePort();
         var waitStrategy = WaitStrategy.UntilPortIsAvailable(8080);
         containerBuilder = containerBuilder
                 .WithCommand(LaunchCommand.ToArray())
-                // .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
                 .WithResourceMapping(new FileInfo(context.DropletDirectory / "staging_info.yml"), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions)
-                // .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath())
                 .WithResourceMapping(new DirectoryInfo(context.ProfileDDirectory), (RemoteHome / ".profile.d").AsLinuxPath())
                 .WithBindMount(context.ApplicationDirectory, RemoteHome / "app")
                 .WithBindMount(context.DependenciesDirectory,  RemoteHome / "deps")
                 .WithEnvironment("DEPS_DIR", (RemoteHome / "deps").AsLinuxPath())
-                .WithEnvironment("PORT", "8080")
                 .WithEnvironment("HOME", RemoteHome / "app")
                 .WithWaitStrategy(waitStrategy)
-                .WithPortBinding(8080, 8080)
-            
+                .WithPortBinding(freeHostPort, 8080)
             ;
+        
         var container = containerBuilder.Build();
-        var result = new LaunchResult(container);
+        var result = new LaunchResult(container, freeHostPort);
         try
         {
             await container.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -117,16 +147,15 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         }
         
         var containerBuilder = StagingContainerConfigurer(CommonContainerConfigurer(new(), context)); 
-
-        if (!Directory.Exists(context.ApplicationDirectory))
+        if (!context.ApplicationDirectory.Exists())
             throw new InvalidOperationException("Application directory doesn't exist");
-        if (!Directory.Exists(context.LifecycleDirectory))
+        if (context.LifecycleDirectory == null || !context.LifecycleDirectory.Exists())
             throw new InvalidOperationException("Lifecycle directory doesn't exist");
         if (context.DropletDirectory == null)
             throw new InvalidOperationException("Value of context.DropletDirectory must not be null");
-        
-        FileSystemTasks.EnsureExistingDirectory(context.CacheDirectory);
-        FileSystemTasks.EnsureExistingDirectory(context.DropletDirectory);
+
+        context.CacheDirectory.CreateDirectory();
+        context.DropletDirectory.CreateDirectory();
         var stageCommand = new List<string>(StageCommand);
         stageCommand.AddRange(context.Buildpacks.Select(x => x.NameWithoutExtension));
         if (context.SkipDetect)
@@ -134,13 +163,9 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
             stageCommand.Add("-skipDetect");
         }
         containerBuilder = containerBuilder
-                // .WithCloudFoundryTestStack(context.Stack)
                 .WithCommand(stageCommand.ToArray())
-                // .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
-                // .WithResourceMapping(new FileInfo(currentAssemblyFolder / $"stage.{scriptExtension}"), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions)
                 .WithResourceMapping(new DirectoryInfo(context.CacheDirectory), (RemoteTemp / "cache").AsLinuxPath())
                 .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
-                // .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath())
                 .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
             ;
         foreach (var buildpackZip in context.Buildpacks)
@@ -160,7 +185,6 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
             try
             {
                 logs = await container.GetLogsAsync(ct: cancellationToken);
-                output?.WriteLine(logs.ToString());
             }
             catch (Exception)
             {

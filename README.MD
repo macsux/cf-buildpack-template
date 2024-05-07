@@ -71,3 +71,10 @@ applications:
     - hwc_buildpack
 ```
 
+## FAQ
+
+Q: Where are test results stored?
+A: Each test run is created in tests projects `/bin/Debug/net8.0` folder
+
+Q: I can't delete `tests/<MyBuildpack>/bin` folder
+A: The droplet gets extracted from tarball using Linux permissions and any symlinks, which may prevent normal delete command from working on Windows. To get around this, execute `sudo rm -r ./bin` from WSL

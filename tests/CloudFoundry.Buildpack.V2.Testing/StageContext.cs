@@ -5,7 +5,6 @@ namespace CloudFoundry.Buildpack.V2.Testing;
 [PublicAPI]
 public class StageContext : CloudFoundryContainerContext
 {
-    internal AbsolutePath? RootDirectory { get; set; }
     public AbsolutePath? CacheDirectory { get; set; }
     public AbsolutePath? DropletDirectory { get; set; }
     public List<AbsolutePath> Buildpacks { get; set; } = [];
@@ -14,20 +13,4 @@ public class StageContext : CloudFoundryContainerContext
     /// </summary>
     public bool SkipDetect { get; set; }
     
-    public static StageContext Generate(AbsolutePath appPath, CloudFoundryStack stack, [CallerMemberName]string callingMethod = "test")
-    {
-        var rootDir = DirectoryHelper.RootDirectory;
-        var baseDir = (AbsolutePath)Directory.GetCurrentDirectory() / $"{callingMethod}-{DateTime.Now.Ticks:x}";
-        var context = new StageContext
-        {
-            RootDirectory = rootDir,
-            Stack = stack,
-            CacheDirectory = baseDir / "cache",
-            ApplicationDirectory = appPath,
-            DropletDirectory = baseDir / "droplet",
-            LifecycleDirectory = rootDir / "lifecycle"
-        };
-
-        return context;
-    }
 }

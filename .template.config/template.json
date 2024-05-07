@@ -1,51 +1,79 @@
 {
-    "$schema": "http://json.schemastore.org/template",
-    "author": "Andrew Stakhov",
-    "classifications": [ "Console", "Buildpack" ], 
-    "name": "Cloud Foundry Buildpack Template",
-    "identity": "CloudFoundry.Buildpack",         
-    "groupIdentity":"CloudFoundry",
-    "shortName": "buildpack",                    
-    "tags": {
-      "language": "C#",                         
-      "type":"project"
-    },
-    "sourceName": "MyBuildpack",             
-    "preferNameDirectory":true,
-  symbols: {
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Andrew Stakhov",
+  "classifications": [ "Console", "Buildpack" ], 
+  "name": "Cloud Foundry Buildpack Template",
+  "identity": "CloudFoundry.Buildpack",         
+  "groupIdentity":"CloudFoundry",
+  "shortName": "buildpack",                    
+  "tags": {
+    "language": "C#",                         
+    "type":"project"
+  },
+  "sourceName": "MyBuildpack",             
+  "preferNameDirectory": true,
+  "symbols": {
     "UsePackages": {
-      datatype: "bool",
-      type: "generated",
-      generator: "constant",
-      parameters: {
-        value: "True"
+      "datatype": "bool",
+      "type": "generated",
+      "generator": "constant",
+      "parameters": {
+        "value": "True"
       },
-      defaultValue: "True"
+      "defaultValue": "True"
+    },
+    
+    "BuildpackType": {
+      "type": "parameter",
+      "datatype": "choice",
+      "description": "The type of buildpack to create: supply or final",
+      "isRequired": true,
+      "choices": [
+        {
+          "choice": "supply",
+          "description": "Contributes to container creation but doesn't control how app starts. Must be explicitly specified when staging or in manifest. Does not participate in detection"
+        },
+        {
+          "choice": "final",
+          "description": "Last buildpack that sets how the app will launch. Must implement detect method and set launch command. Only one final buildpack can be selected during staging"
+        }
+      ]
+    },
+    "IsSupplyBuildpack": {
+      "datatype": "bool",
+      "type": "computed",
+      "value": "BuildpackType == \"supply\""
     }
   },
   "sources": [
+    {
+      "modifiers": [
         {
-          "modifiers": [
-            {
-              "exclude": [
-                ".git/**",
-                ".nuke/**",
-                "**/.dotnet/**",
-                "artifacts/**",
-                "**/.idea/**",
-                "**/.vs/**",
-                ".tmp/**",
-                "buildpack.nuspec",
-                ".template.build/**",
-                ".template.artifacts/**",
-                "src/CloudFoundry.Buildpack.V2.Analyzers/**",
-                "src/CloudFoundry.Buildpack.V2.Lib/**",
-                "tests/CloudFoundry.Buildpack.V2.Testing/**",
-                "**/*.DotSettings",
-                "nuget.config"
-              ]
-            }
+          "exclude": [
+            ".git/**",
+            ".nuke/temp/**",
+            ".nuke/build.schema.json",
+            "**/.dotnet/**",
+            "artifacts/**",
+            "**/.idea/**",
+            "**/.vs/**",
+            ".tmp/**",
+            "buildpack.nuspec",
+            ".template.build/**",
+            ".template.artifacts/**",
+            "src/CloudFoundry.Buildpack.V2.Analyzers/**",
+            "src/CloudFoundry.Buildpack.V2.Lib/**",
+            "tests/CloudFoundry.Buildpack.V2.Testing/**",
+            "lifecycle/**",
+            "**/*.DotSettings",
+            "nuget.config",
+            "CloudFoundry.Buildpack.V2.Build/**",
+            "build/Build.Template.cs",
+            ".template.config/template.json",
+            "MyBuildpack.Template.sln"
           ]
         }
       ]
-  }
+    }
+  ]
+}

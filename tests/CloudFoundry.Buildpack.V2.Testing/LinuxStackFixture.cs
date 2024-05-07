@@ -29,13 +29,45 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
         StageCommand =  [ RemoteTemp / StageScriptName ];
     }
 
+    protected override Dictionary<string, string> GetContainerEnvironmentalVariables(CloudFoundryContainerContext context)
+    {
+        var envVars = new Dictionary<string, string>(context.EnvironmentalVariables);
+        envVars.TryAdd("_","/bin/env");
+        envVars.TryAdd("CF_INSTANCE_CERT","/etc/cf-instance-credentials/instance.crt");
+        envVars.TryAdd("CF_INSTANCE_INTERNAL_IP","10.255.112.62");
+        envVars.TryAdd("CF_INSTANCE_IP","10.0.4.12");
+        envVars.TryAdd("CF_INSTANCE_KEY","/etc/cf-instance-credentials/instance.key");
+        envVars.TryAdd("CF_INSTANCE_PORTS","""[{"internal":8080,"external_tls_proxy":61026,"internal_tls_proxy":61001},{"internal":8080,"internal_tls_proxy":61443},{"internal":2222,"external_tls_proxy":61027,"internal_tls_proxy":61002}]""");
+        envVars.TryAdd("CF_SYSTEM_CERT_PATH","/etc/cf-system-certificates");
+        envVars.TryAdd("LANG","en_US.UTF-8");
+        envVars.TryAdd("LESSCLOSE","/bin/lesspipe %s %s");
+        envVars.TryAdd("LESSOPEN","| /bin/lesspipe %s");
+        envVars.TryAdd("LS_COLORS","rs");
+        envVars.TryAdd("MEMORY_LIMIT",$"{context.VcapApplication.Limits.Mem}m");
+        envVars.TryAdd("PATH","/bin:/usr/bin");
+        envVars.TryAdd("PWD","/home/vcap");
+        envVars.TryAdd("SHLVL","1");
+        envVars.TryAdd("TERM","xterm");
+        envVars.TryAdd("USER","vcap");
+        envVars.TryAdd("CF_INSTANCE_GUID","4f72d8f5-c51b-4adf-6749-06f6");
+        envVars.TryAdd("CF_INSTANCE_INDEX","0");
+        envVars.TryAdd("DATABASE_URL","mysql2://523eac29c07a4db58da7d6150bb0ce7c:r1jb85k977b1ew0z@82e190a0-be30-4648-8f05-991cc7b34ffe.mysql.service.internal:3306/service_instance_db?reconnect");
+        envVars.TryAdd("INSTANCE_GUID","4f72d8f5-c51b-4adf-6749-06f6");
+        envVars.TryAdd("INSTANCE_INDEX","0");
+        envVars.TryAdd("PORT","8080");
+        envVars.TryAdd("VCAP_APP_HOST","0.0.0.0");
+        envVars.TryAdd("VCAP_APP_PORT","8080");
+
+        return envVars;
+    }
+
     protected abstract string TestImageDockerfile { get; }
 
     public override async Task InitializeAsync()
     {
         DockerHelper.SwitchContainersPlatform(ContainerPlatform.Linux);
         var dockerContextDirectory = DirectoryHelper.CurrentAssemblyFolder / "_empty";
-        FileSystemTasks.EnsureExistingDirectory(dockerContextDirectory);
+        dockerContextDirectory.CreateDirectory();
         FileSystemTasks.CopyFileToDirectory(DirectoryHelper.CurrentAssemblyFolder / TestImageDockerfile, dockerContextDirectory, FileExistsPolicy.OverwriteIfNewer);
         var image = new ImageFromDockerfileBuilder()
             .WithDockerfile(TestImageDockerfile)
