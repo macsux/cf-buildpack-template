@@ -1,4 +1,5 @@
 #!/bin/bash
+shopt -s nullglob
 cd /home/vcap
 tmp=/tmp
 #tmp=/home/andrew/projects/cf-buildpack-template

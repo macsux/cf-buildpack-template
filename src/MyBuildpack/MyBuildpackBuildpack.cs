@@ -25,6 +25,7 @@ public partial class MyBuildpackBuildpack : FinalBuildpack
     protected override void Apply(BuildContext context)
     {
         Console.WriteLine("Hello world");
+        Console.WriteLine(context.SourceDependenciesDirectory);
         File.WriteAllText(context.BuildDirectory / "contrib.txt", "test");
         EnvironmentalVariables["MY_SETTING"] = "value"; // set any environmental variables for the app (staging phase)
     }

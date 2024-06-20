@@ -22,8 +22,8 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageDownload Include="CloudFoundry.Buildpack.V2.Lifecycle" Version="[4.0.1-g787d416975]" />
-        <PackageReference Condition="'$(UsePackages)' == 'true'" Include="CloudFoundry.Buildpack.V2.Testing" Version="1.0.0"/>
+        <PackageDownload Include="CloudFoundry.Buildpack.V2.Lifecycle" Version="[4.0.0]" />
+        <PackageReference Condition="'$(UsePackages)' == 'true'" Include="CloudFoundry.Buildpack.V2.Testing" Version="4.*"/>
         <ProjectReference Condition="'$(UsePackages)' == 'false'" Include="..\CloudFoundry.Buildpack.V2.Testing\CloudFoundry.Buildpack.V2.Testing.csproj" />
     </ItemGroup>
 

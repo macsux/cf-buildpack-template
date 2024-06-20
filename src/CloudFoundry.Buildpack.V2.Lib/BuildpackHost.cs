@@ -20,23 +20,24 @@ public class BuildpackHost
     }
     public int Run()
     {
-        var args = EnvironmentHelper.GetCommandLineArgsNative();
-        //Console.WriteLine(string.Join(" ", args));
-        // var args = Environment.GetCommandLineArgs().ToList().ToArray();
-        if (EnvironmentInfo.IsWin && args[0].StartsWith(@"\"))
-        {
-            args[0] = $"c:{args[0]}";
-        }
-        if(!Path.IsPathRooted(args[0]))
-        {
-            args[0] = (AbsolutePath)Directory.GetCurrentDirectory() / args[0];
-        }
-        // Console.WriteLine($"Entry:{Assembly.GetEntryAssembly()?.Location}");
-        // Console.WriteLine("------");
         
-        // return 0;
-        var entrypointExecutable = (AbsolutePath)args[0];
-        var hookName = entrypointExecutable.NameWithoutExtension; // try to get hook name from entrypoint executable name (normal execution conditions)
+        var args = EnvironmentHelper.GetCommandLineArgsNative();
+        // //Console.WriteLine(string.Join(" ", args));
+        // // var args = Environment.GetCommandLineArgs().ToList().ToArray();
+        // if (EnvironmentInfo.IsWin && args[0].StartsWith(@"\"))
+        // {
+        //     args[0] = $"c:{args[0]}";
+        // }
+        // if(!Path.IsPathRooted(args[0]))
+        // {
+        //     args[0] = (AbsolutePath)Directory.GetCurrentDirectory() / args[0];
+        // }
+        // // Console.WriteLine($"Entry:{Assembly.GetEntryAssembly()?.Location}");
+        // // Console.WriteLine("------");
+        //
+        // // return 0;
+        // var entrypointExecutable = (AbsolutePath)args[0];
+        var hookName = BuildpackContext.EntrypointExecutable.NameWithoutExtension; // try to get hook name from entrypoint executable name (normal execution conditions)
         args = args.Skip(1).ToArray(); // going forward, remove entrypoint as the first arg
         // Console.Error.WriteLine($"HookName: {hookName}");
         var appDirectory = new Argument<string>(

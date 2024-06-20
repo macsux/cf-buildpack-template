@@ -11,7 +11,7 @@ public class BuildContextBinder(Argument<string> buildPath, Argument<string> cac
         {
             BuildDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(buildPath)!,
             CacheDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(cachePath)!,
-            DependenciesDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(depsPath)!,
+            ContainerDependenciesDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(depsPath)!,
             BuildpackIndex = bindingContext.ParseResult.GetValueForArgument(buildpackIndex),
             IsFinalize = hookName == Lifecycle.Finalize
         };

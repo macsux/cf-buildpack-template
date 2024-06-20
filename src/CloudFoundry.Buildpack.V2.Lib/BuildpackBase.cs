@@ -66,7 +66,7 @@ public abstract class BuildpackBase
         Apply(context);
         
         // var buildpackDepsDir = Path.Combine(depsPath, index.ToString());
-        FileSystemTasks.EnsureExistingDirectory(context.CurrentDependencyDirectory);
+        FileSystemTasks.EnsureExistingDirectory(context.TargetDependenciesDirectory);
         var profiled = context.BuildDirectory / ".profile.d";
         FileSystemTasks.EnsureExistingDirectory(profiled);
         if (IsPreStartOverridden) 
@@ -82,7 +82,7 @@ public abstract class BuildpackBase
                 .ToList();
             foreach(var file in buildpackFiles)
             {
-                FileSystemTasks.CopyFile(file, context.CurrentDependencyDirectory / file.Name);
+                FileSystemTasks.CopyFile(file, context.TargetDependenciesDirectory / file.Name);
             }
 
             var extension = !IsLinux ? ".exe" : string.Empty;

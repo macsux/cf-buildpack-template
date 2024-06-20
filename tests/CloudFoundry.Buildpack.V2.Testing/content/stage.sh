@@ -1,4 +1,5 @@
 #!/bin/bash
+shopt -s nullglob
 getBuildpackDir(){
   buildpackName=$1
   dirName=$(echo -n $buildpackName | md5sum | awk '{print $1}')
