@@ -36,6 +36,14 @@
         {
           "choice": "final",
           "description": "Last buildpack that sets how the app will launch. Must implement detect method and set launch command. Only one final buildpack can be selected during staging"
+        },
+        {
+          "choice": "httpmodule",
+          "description": "Specialized buildpack that injects HTTP Module into ASP.NET apps allowing buildpack to contribute code that runs inside application process "
+        },
+        {
+          "choice": "hostedservice",
+          "description": "Specialized buildpack that injects IHostedService into .NET Core apps allowing buildpack to contribute code that runs inside application process"
         }
       ]
     },
@@ -43,6 +51,21 @@
       "datatype": "bool",
       "type": "computed",
       "value": "BuildpackType == \"supply\""
+    },
+    "IsFinalBuildpack": {
+      "datatype": "bool",
+      "type": "computed",
+      "value": "BuildpackType == \"final\""
+    },
+    "IsHttpModuleBuildpack": {
+      "datatype": "bool",
+      "type": "computed",
+      "value": "BuildpackType == \"httpmodule\""
+    },
+    "IsHostedServiceBuildpack": {
+      "datatype": "bool",
+      "type": "computed",
+      "value": "BuildpackType == \"hostedservice\""
     }
   },
   "sources": [

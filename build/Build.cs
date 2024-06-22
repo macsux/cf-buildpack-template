@@ -7,7 +7,7 @@ using Nuke.Common.ProjectModel;
 
 [assembly: InternalsVisibleTo("MyBuildpackTests")]
 [UnsetVisualStudioEnvironmentVariables]
-partial class Build : NukeBuild, IPublishBuildpack, IReleaseGithub
+partial class Build : NukeBuild, IPublishBuildpack, IReleaseGithub, IBuildNugetCache
 {
     [Solution] public Solution Solution { get; set; } = null!;
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
@@ -32,4 +32,7 @@ partial class Build : NukeBuild, IPublishBuildpack, IReleaseGithub
     ///   - Microsoft VSCode           https://nuke.build/vscode
 
     public static int Main () => Execute<Build>(x => ((IPublishBuildpack)x).PublishBuildpack);
+
+    [Parameter("Injection Project")]
+    public string? InjectionProject { get; set; }
 }

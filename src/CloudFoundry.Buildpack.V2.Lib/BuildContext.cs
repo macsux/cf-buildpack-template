@@ -16,6 +16,9 @@ public sealed class BuildContext : BuildpackContext
     public VariablePath ContainerDependenciesDirectory { get; internal set; } = null!;
     public VariablePath CacheDirectory { get; internal set; } = null!;
     public int BuildpackIndex { get; internal set; }
+    /// <summary>
+    /// Dependency directory for CURRENT buildpack (deps/{index})
+    /// </summary>
     public VariablePath TargetDependenciesDirectory => ContainerDependenciesDirectory / BuildpackIndex.ToString();
     public bool IsFinalize { get; set; }
     

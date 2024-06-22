@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net48</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <LangVersion>latest</LangVersion>
+        <Configurations>Debug;Release;Supply</Configurations>
+        <Platforms>AnyCPU</Platforms>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Lib.Harmony" Version="2.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="System.Web" />
+    </ItemGroup>
+
+</Project>

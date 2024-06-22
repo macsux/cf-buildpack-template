@@ -1,26 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.0</TargetFramework>
+        <TargetFramework>net472</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>CloudFoundry.Buildpack.V2</RootNamespace>
         <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
-
     <ItemGroup>
-      <PackageReference Include="NMica.Utils" Version="2.0.1" />
-      <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+        <PackageReference Include="NMica.Utils" Version="2.0.1" />
     </ItemGroup>
-
     <ItemGroup Condition="'$(UsePackages)' == 'false'">
         <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Analyzers\CloudFoundry.Buildpack.V2.Analyzers.csproj"
                           OutputItemType="Analyzer"
                           ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Lib\CloudFoundry.Buildpack.V2.Lib.csproj" />
     </ItemGroup>
     <ItemGroup Condition="'$(UsePackages)' == 'true'">
         <PackageReference Include="CloudFoundry.Buildpack.V2.Analyzers" Version="4.*"/>
+        <PackageReference Include="CloudFoundry.Buildpack.V2.Lib" Version="4.*"/>
+    </ItemGroup>
+    <ItemGroup>
+      <Reference Include="System.Web" />
     </ItemGroup>
 
 </Project>

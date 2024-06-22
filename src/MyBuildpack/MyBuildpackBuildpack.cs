@@ -1,11 +1,16 @@
 ﻿namespace CloudFoundry.Buildpack.V2.MyBuildpack;
 
 #if(IsSupplyBuildpack)
-    public partial class MyBuildpackBuildpack : SupplyBuildpack
+public partial class MyBuildpackBuildpack : SupplyBuildpack
+#elif(IsHttpModuleBuildpack)
+public partial class MyBuildpackBuildpack : HttpModuleBuildpack
+#elif(IsHostedServiceBuildpack)
+public partial class MyBuildpackBuildpack : HostedServiceBuildpack
 #else
 public partial class MyBuildpackBuildpack : FinalBuildpack
 #endif
 {
+#if(!IsHttpModuleBuildpack && !IsHostedServiceBuildpack)
 #if(!IsSupplyBuildpack)
     public override bool Detect(DetectContext context)
     {
@@ -37,4 +42,5 @@ public partial class MyBuildpackBuildpack : FinalBuildpack
     //     Console.WriteLine("Application is about to start...");
     //     EnvironmentalVariables["MY_SETTING"] = "value"; // can set env vars before app starts running
     // }
+#endif
 }

@@ -46,6 +46,10 @@
             "VSCode"
           ]
         },
+        "InjectionProject": {
+          "type": "string",
+          "description": "Injection Project"
+        },
         "NoLogo": {
           "type": "boolean",
           "description": "Disables displaying the NUKE logo"
@@ -87,6 +91,7 @@
           "items": {
             "type": "string",
             "enum": [
+              "BuildHttpModule",
               "GithubRelease",
               "PublishBuildpack",
               "PublishTemplate",
@@ -112,6 +117,7 @@
           "items": {
             "type": "string",
             "enum": [
+              "BuildHttpModule",
               "GithubRelease",
               "PublishBuildpack",
               "PublishTemplate",
