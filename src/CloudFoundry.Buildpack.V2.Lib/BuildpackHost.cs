@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.Diagnostics;
 using CloudFoundry.Buildpack.V2.Commands;
 using NMica.Utils;
 using NMica.Utils.IO;

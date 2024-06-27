@@ -6,13 +6,6 @@
     "build": {
       "type": "object",
       "properties": {
-        "Config": {
-          "type": "string",
-          "description": "Configuration to build - Default is 'Debug' (local) or 'Release' (server)"
-        },
-        "Configuration": {
-          "type": "string"
-        },
         "Continue": {
           "type": "boolean",
           "description": "Indicates to continue a previously failed build attempt"
@@ -91,8 +84,10 @@
           "items": {
             "type": "string",
             "enum": [
-              "BuildHttpModule",
+              "BuildInjectors",
+              "EnsureCleanWorkDirectory",
               "GithubRelease",
+              "Publish",
               "PublishBuildpack",
               "PublishTemplate",
               "ReleaseTemplate"
@@ -117,8 +112,10 @@
           "items": {
             "type": "string",
             "enum": [
-              "BuildHttpModule",
+              "BuildInjectors",
+              "EnsureCleanWorkDirectory",
               "GithubRelease",
+              "Publish",
               "PublishBuildpack",
               "PublishTemplate",
               "ReleaseTemplate"

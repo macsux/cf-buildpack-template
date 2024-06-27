@@ -1,6 +1,7 @@
 {
-  "$schema": "http://json.schemastore.org/template",
+  "$schema": "https://json.schemastore.org/template",
   "author": "Andrew Stakhov",
+  
   "classifications": [ "Console", "Buildpack" ], 
   "name": "Cloud Foundry Buildpack Template",
   "identity": "CloudFoundry.Buildpack",         
@@ -13,9 +14,19 @@
   "sourceName": "MyBuildpack",             
   "preferNameDirectory": true,
   "symbols": {
+    "RenameTemplate": {
+      "type": "generated",
+      "generator": "constant",
+      "parameters": {
+        "value": ""
+      },
+      "datatype": "text",
+      "fileRename": ".Template"
+    },
     "UsePackages": {
       "datatype": "bool",
       "type": "generated",
+      "value": "",
       "generator": "constant",
       "parameters": {
         "value": "True"
@@ -72,6 +83,18 @@
     {
       "modifiers": [
         {
+          "condition": "!(IsHostedServiceBuildpack)",
+          "exclude": [
+            "src/MyBuildpackHostingStartup/**"
+          ]
+        },
+        {
+          "condition": "!(IsHttpModuleBuildpack)",
+          "exclude": [
+            "src/MyBuildpackHttpModule/**"
+          ]
+        },
+        {
           "exclude": [
             ".git/**",
             ".nuke/temp/**",
@@ -84,16 +107,15 @@
             "buildpack.nuspec",
             ".template.build/**",
             ".template.artifacts/**",
-            "src/CloudFoundry.Buildpack.V2.Analyzers/**",
-            "src/CloudFoundry.Buildpack.V2.Lib/**",
-            "tests/CloudFoundry.Buildpack.V2.Testing/**",
+            "src/CloudFoundry.Buildpack.V2*/**",
+            "tests/CloudFoundry.Buildpack.V2*/**",
             "lifecycle/**",
             "**/*.DotSettings",
             "nuget.config",
             "CloudFoundry.Buildpack.V2.Build/**",
             "build/Build.Template.cs",
             ".template.config/template.json",
-            "MyBuildpack.Template.sln"
+            "MyBuildpack.sln"
           ]
         }
       ]

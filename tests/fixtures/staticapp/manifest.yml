@@ -1,0 +1,10 @@
+---
+applications:
+
+- name: aspx
+  random-route: true
+  memory: 512M
+  health-check-type: process
+  #health-check-http-endpoint: /
+  buildpack: hwc_buildpack
+  stack: windows

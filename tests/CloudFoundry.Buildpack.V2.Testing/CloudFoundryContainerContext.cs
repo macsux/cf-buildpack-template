@@ -13,7 +13,7 @@ public class CloudFoundryContainerContext
         {
             ApplicationName = "my-app",
             ApplicationId = Guid.NewGuid().ToString(),
-            ApplicationUris = { "http://localhost:8080" },
+            ApplicationUris = { "localhost:8080" },
             ApplicationVersion = Guid.NewGuid().ToString(),
             CfApi = "http://api.cf.local",
             Limits = new()

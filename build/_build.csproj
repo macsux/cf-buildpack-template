@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageDownload Include="nbgv" Version="[3.6.133]" />
+    <PackageDownload Include="NuGet.CommandLine" Version="[6.10.0]" />
     <PackageReference Include="Nuke.Common" Version="8.0.0" />
     <PackageReference Include="Octokit" Version="9.1.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />

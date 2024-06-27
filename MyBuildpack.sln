@@ -16,6 +16,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{FEBA1EBA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyBuildpack.Tests", "tests\MyBuildpack.Tests\MyBuildpack.Tests.csproj", "{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyBuildpackHttpModule", "src\MyBuildpackHttpModule\MyBuildpackHttpModule.csproj", "{205BBC61-D947-42D8-9744-1A6F7617DC00}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyBuildpackHostingStartup", "src\MyBuildpackHostingStartup\MyBuildpackHostingStartup.csproj", "{4A847C32-B9EC-4C39-8E67-C358CC6C21C4}"
+EndProject
 
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,6 +40,14 @@ Global
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Release|Any CPU.Build.0 = Release|Any CPU
 	
+		{205BBC61-D947-42D8-9744-1A6F7617DC00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{205BBC61-D947-42D8-9744-1A6F7617DC00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{205BBC61-D947-42D8-9744-1A6F7617DC00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{205BBC61-D947-42D8-9744-1A6F7617DC00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A847C32-B9EC-4C39-8E67-C358CC6C21C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A847C32-B9EC-4C39-8E67-C358CC6C21C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A847C32-B9EC-4C39-8E67-C358CC6C21C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A847C32-B9EC-4C39-8E67-C358CC6C21C4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -48,5 +60,7 @@ Global
 		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172} = {A989B8EF-B8C1-4BA9-BF91-B3B0529E4584}
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003} = {FEBA1EBA-2A0C-4AEA-AB03-441C9A48A996}
 
+		{205BBC61-D947-42D8-9744-1A6F7617DC00} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
+		{4A847C32-B9EC-4C39-8E67-C358CC6C21C4} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
 	EndGlobalSection
 EndGlobal

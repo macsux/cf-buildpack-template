@@ -4,4 +4,5 @@ public struct PublishTarget
 {
     public string Framework { get; set; }
     public string Runtime { get; set; }
+    public StackType Stack { get; set; }
 }

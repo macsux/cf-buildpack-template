@@ -24,9 +24,31 @@ namespace CloudFoundry.Buildpack.V2.Build;
 
 public interface IPublishBuildpack : IBuildpackBase
 {
-    bool IsSupplyBuildpack { get; }
+    Target Publish => _ => _
+        .Executes(() =>
+        {
+            foreach (var publishCombination in PublishCombinations)
+            {
+                var framework = publishCombination.Framework;
+                var runtime = publishCombination.Runtime;
+
+                DotNetPublish(s => s
+                    .SetProject(BuildpackProject.Path)
+                    .SetConfiguration(Configuration)
+                    .EnableSelfContained()
+                    .SetFramework(framework)
+                    .SetRuntime(runtime)
+                    .SetAssemblyVersion(GitVersion.AssemblyVersion)
+                    .SetFileVersion(GitVersion.AssemblyFileVersion)
+                    .SetInformationalVersion(GitVersion.AssemblyInformationalVersion)
+                );
+            }
+        });
+    
     Target PublishBuildpack => _ => _
         .Description("Packages buildpack in Cloud Foundry expected format into /artifacts directory")
+        .DependsOn(Publish, EnsureCleanWorkDirectory)
+        .TryDependsOn<IAssemblyInject>(x => x.BuildInjectors)
         .Executes(() =>
         {
             foreach (var publishCombination in PublishCombinations)
@@ -34,9 +56,8 @@ public interface IPublishBuildpack : IBuildpackBase
                 var extension = publishCombination.Runtime.StartsWith("win") ? ".exe" : "";
                 var framework = publishCombination.Framework;
                 var runtime = publishCombination.Runtime;
+                var publishWorkDirectory = WorkDirectory / runtime;
                 var packageZipName = GetPackageZipName(runtime);
-                var workDirectory = TemporaryDirectory / "pack";
-                workDirectory.CreateOrCleanDirectory();
                 var buildpackProject = Solution.GetAllProjects(BuildpackProjectName).Single();
                 if (buildpackProject == null)
                     throw new Exception($"Unable to find project called {BuildpackProjectName} in solution {Solution.Name}");
@@ -45,24 +66,8 @@ public interface IPublishBuildpack : IBuildpackBase
                 //var publishDirectory = (AbsolutePath)outputPath / "publish";
                 var publishDirectory = buildpackProject.Directory / "bin" / Configuration / framework / runtime / "publish";
 
-                var workBinDirectory = workDirectory / "bin";
-                var workLibDirectory = workDirectory / "lib";
-
-
-                // string intermediatePath = ((string)(TemporaryDirectory / "obj" / publishCombination.Runtime)) + Path.DirectorySeparatorChar;
-
-                DotNetPublish(s => s
-                    .SetProject(BuildpackProject.Path)
-                    // .SetProperty("IntermediateOutputPath", intermediatePath)
-                    // .SetProperty("OutputPath", outputPath)
-                    .SetConfiguration(Configuration)
-                    .EnableSelfContained()
-                    .SetFramework(framework)
-                    .SetRuntime(runtime)
-                    .SetAssemblyVersion(GitVersion.AssemblyVersion)
-                    .SetFileVersion(GitVersion.AssemblyFileVersion)
-                    .SetInformationalVersion(GitVersion.AssemblyInformationalVersion)
-                ); 
+                var workBinDirectory = publishWorkDirectory / "bin";
+                var workLibDirectory = publishWorkDirectory / "lib";
 
                 CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
                 var supplyExecutable = workBinDirectory / $"supply{extension}";
@@ -70,7 +75,7 @@ public interface IPublishBuildpack : IBuildpackBase
 
                 if (publishCombination.Runtime.StartsWith("win"))
                 {
-                    if (!IsSupplyBuildpack)
+                    if (Configuration == BuildConfiguration.Final)
                     {
                         CopyFile(supplyExecutable, workBinDirectory / $"detect{extension}");
                         CopyFile(supplyExecutable, workBinDirectory / $"finalize{extension}");
@@ -82,7 +87,7 @@ public interface IPublishBuildpack : IBuildpackBase
 
                 var tempZipFile = TemporaryDirectory / packageZipName;
                 tempZipFile.DeleteFile();
-                ZipFile.CreateFromDirectory(workDirectory, tempZipFile, CompressionLevel.NoCompression, false);
+                ZipFile.CreateFromDirectory(publishWorkDirectory, tempZipFile, CompressionLevel.NoCompression, false);
                 if (publishCombination.Runtime.StartsWith("linux"))
                 {
                     MakeLinuxBuildpack(tempZipFile);
@@ -147,7 +152,7 @@ public interface IPublishBuildpack : IBuildpackBase
                 input.CopyTo(output);
             }
 
-            if (!IsSupplyBuildpack)
+            if (Configuration == BuildConfiguration.Final)
             {
                 AddSymLink("bin/detect", "supply");
                 AddSymLink("bin/finalize", "supply");

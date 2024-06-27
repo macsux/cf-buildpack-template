@@ -13,6 +13,7 @@ public interface IBuildpackBase : INukeBuild
 
     AbsolutePath SourceDirectory => RootDirectory / "src";
     AbsolutePath TestsDirectory => RootDirectory / "tests";
+    AbsolutePath WorkDirectory => TemporaryDirectory / "pack";
 
     Solution Solution { get; }
 
@@ -27,11 +28,19 @@ public interface IBuildpackBase : INukeBuild
         get
         {
             if (Stack.HasFlag(StackType.Linux))
-                yield return new PublishTarget {Framework = "net8.0", Runtime = "linux-x64"};
+                yield return new PublishTarget {Stack = StackType.Linux, Framework = "net8.0", Runtime = "linux-x64"};
             if (Stack.HasFlag(StackType.Windows))
-                yield return new PublishTarget {Framework = "net48", Runtime = "win-x64"};
+                yield return new PublishTarget {Stack = StackType.Windows, Framework = "net48", Runtime = "win-x64"};
         }
     }
+
+    Target EnsureCleanWorkDirectory => _ => _
+        .Unlisted()
+        .Executes(() =>
+        {
+            WorkDirectory.CreateOrCleanDirectory();
+        });
+    
     string GetPackageZipName(string runtime) => $"{BuildpackProjectName}-{runtime}-{GitVersion.SemVer1}.zip";
 
 }

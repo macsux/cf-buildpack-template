@@ -5,7 +5,7 @@ using Serilog;
 
 public static class SerilogExtensions
 {
-    public static IDisposable Block(this ILogger logger, string text)
+    public static IDisposable Block(this Serilog.ILogger logger, string text)
     {
         return DelegateDisposable.CreateBracket(
             () =>

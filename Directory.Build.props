@@ -8,8 +8,28 @@
         <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
         <UsePackages>false</UsePackages>
         <LangVersion>latest</LangVersion>
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+        <__RootDirectoryBuildDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</__RootDirectoryBuildDir>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" />
+         <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" PrivateAssets="all" /> 
+
     </ItemGroup>
+    <!--#if (false) -->
+    <PropertyGroup>
+        <Configurations>Debug;Release;Supply;Final;HttpModule;HostedService</Configurations>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Supply' ">
+        <DefineConstants>TRACE;IsSupplyBuildpack</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'Final' ">
+        <DefineConstants>TRACE;IsFinalBuildpack</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'HttpModule' ">
+        <DefineConstants>TRACE;IsHttpModuleBuildpack</DefineConstants> 
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)' == 'HostedService' ">
+        <DefineConstants>TRACE;IsHostedServiceBuildpack</DefineConstants>
+    </PropertyGroup>
+    <!--#endif -->
 </Project>

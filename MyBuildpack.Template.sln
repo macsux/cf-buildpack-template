@@ -16,6 +16,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{FEBA1EBA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyBuildpack.Tests", "tests\MyBuildpack.Tests\MyBuildpack.Tests.csproj", "{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}"
 EndProject
+#if (IsHttpModuleBuildpack)
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyBuildpackHttpModule", "src\MyBuildpackHttpModule\MyBuildpackHttpModule.csproj", "{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}"
+EndProject
+#endif
+#if (IsHostedServiceBuildpack)
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyBuildpackHostingStartup", "src\MyBuildpackHostingStartup\MyBuildpackHostingStartup.csproj", "{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}"
+EndProject
+#endif
+#if (false)
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudFoundry.Buildpack.V2.Testing", "tests\CloudFoundry.Buildpack.V2.Testing\CloudFoundry.Buildpack.V2.Testing.csproj", "{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudFoundry.Buildpack.V2.Build", "CloudFoundry.Buildpack.V2.Build\CloudFoundry.Buildpack.V2.Build.csproj", "{16790A3E-4915-4B48-8B20-37591CAE1EF5}"
@@ -24,39 +33,72 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudFoundry.Buildpack.V2.L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudFoundry.Buildpack.V2.Analyzers", "src\CloudFoundry.Buildpack.V2.Analyzers\CloudFoundry.Buildpack.V2.Analyzers.csproj", "{76009D87-4ACB-4144-837D-0DDE48FED377}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudFoundry.Buildpack.V2.Lib.HttpModule", "src\CloudFoundry.Buildpack.V2.Lib.HttpModule\CloudFoundry.Buildpack.V2.Lib.HttpModule.csproj", "{E5E61005-7BE7-4EE1-817E-F5DA80C34D7E}"
+
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".template", ".template", "{956BF12E-279A-4740-BFEB-B8975D9B6CDF}"
+	ProjectSection(SolutionItems) = preProject
+		.template.config\template.json = .template.config\template.json
+		buildpack.nuspec = buildpack.nuspec
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyBuildpackHttpModule", "src\MyBuildpackHttpModule\MyBuildpackHttpModule.csproj", "{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}"
-EndProject
+#endif
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 		Supply|Any CPU = Supply|Any CPU
+		Final|Any CPU = Final|Any CPU
+		HttpModule|Any CPU = HttpModule|Any CPU
+		HostedService|Any CPU = HostedService|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172}.Supply|Any CPU.ActiveCfg = Debug|Any CPU
+#if (false)
+		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172}.Final|Any CPU.ActiveCfg = Final|Any CPU
+		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172}.HostedService|Any CPU.ActiveCfg = HostedService|Any CPU
+		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172}.HttpModule|Any CPU.ActiveCfg = HttpModule|Any CPU
+		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172}.Supply|Any CPU.ActiveCfg = Supply|Any CPU
+#endif
 		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.Release|Any CPU.Build.0 = Release|Any CPU
 		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.Debug|Any CPU.ActiveCfg = Supply|Any CPU
 		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.Debug|Any CPU.Build.0 = Supply|Any CPU
+#if (false)
 		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.Supply|Any CPU.ActiveCfg = Supply|Any CPU
 		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.Supply|Any CPU.Build.0 = Supply|Any CPU
-		
+		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.Final|Any CPU.ActiveCfg = Final|Any CPU
+		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.Final|Any CPU.Build.0 = Final|Any CPU
+		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.HttpModule|Any CPU.ActiveCfg = HttpModule|Any CPU
+		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.HttpModule|Any CPU.Build.0 = HttpModule|Any CPU
+		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.HostedService|Any CPU.ActiveCfg = HostedService|Any CPU
+		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54}.HostedService|Any CPU.Build.0 = HostedService|Any CPU
+#endif
 		
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Supply|Any CPU.ActiveCfg = Debug|Any CPU
-		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Supply|Any CPU.Build.0 = Debug|Any CPU
-		
+#if (false)
+		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Final|Any CPU.ActiveCfg = Final|Any CPU
+		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Final|Any CPU.Build.0 = Final|Any CPU
+		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Supply|Any CPU.ActiveCfg = Supply|Any CPU
+		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.Supply|Any CPU.Build.0 = Supply|Any CPU
+		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.HttpModule|Any CPU.ActiveCfg = HttpModule|Any CPU
+		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.HttpModule|Any CPU.Build.0 = HttpModule|Any CPU
+		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.HostedService|Any CPU.ActiveCfg = HostedService|Any CPU
+		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.HostedService|Any CPU.Build.0 = HostedService|Any CPU
+#endif
+#if(false)
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Final|Any CPU.ActiveCfg = Debug|Any CPU
+		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Final|Any CPU.Build.0 = Debug|Any CPU
+		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.HostedService|Any CPU.ActiveCfg = Debug|Any CPU
+		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.HostedService|Any CPU.Build.0 = Debug|Any CPU
+		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.HttpModule|Any CPU.ActiveCfg = Debug|Any CPU
+		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.HttpModule|Any CPU.Build.0 = Debug|Any CPU
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Supply|Any CPU.ActiveCfg = Debug|Any CPU
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Supply|Any CPU.Build.0 = Debug|Any CPU
 		
@@ -64,6 +106,12 @@ Global
 		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.Final|Any CPU.ActiveCfg = Debug|Any CPU
+		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.Final|Any CPU.Build.0 = Debug|Any CPU
+		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.HostedService|Any CPU.ActiveCfg = Debug|Any CPU
+		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.HostedService|Any CPU.Build.0 = Debug|Any CPU
+		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.HttpModule|Any CPU.ActiveCfg = Debug|Any CPU
+		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.HttpModule|Any CPU.Build.0 = Debug|Any CPU
 		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.Supply|Any CPU.ActiveCfg = Debug|Any CPU
 		{16790A3E-4915-4B48-8B20-37591CAE1EF5}.Supply|Any CPU.Build.0 = Debug|Any CPU
 		
@@ -71,6 +119,12 @@ Global
 								{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 								{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 								{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.Final|Any CPU.ActiveCfg = Debug|Any CPU
+		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.Final|Any CPU.Build.0 = Debug|Any CPU
+		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.HostedService|Any CPU.ActiveCfg = Debug|Any CPU
+		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.HostedService|Any CPU.Build.0 = Debug|Any CPU
+		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.HttpModule|Any CPU.ActiveCfg = Debug|Any CPU
+		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.HttpModule|Any CPU.Build.0 = Debug|Any CPU
 		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.Supply|Any CPU.ActiveCfg = Debug|Any CPU
 		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C}.Supply|Any CPU.Build.0 = Debug|Any CPU
 								
@@ -78,21 +132,45 @@ Global
 								{76009D87-4ACB-4144-837D-0DDE48FED377}.Debug|Any CPU.Build.0 = Debug|Any CPU
 								{76009D87-4ACB-4144-837D-0DDE48FED377}.Release|Any CPU.ActiveCfg = Release|Any CPU
 								{76009D87-4ACB-4144-837D-0DDE48FED377}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76009D87-4ACB-4144-837D-0DDE48FED377}.Final|Any CPU.ActiveCfg = Debug|Any CPU
+		{76009D87-4ACB-4144-837D-0DDE48FED377}.Final|Any CPU.Build.0 = Debug|Any CPU
+		{76009D87-4ACB-4144-837D-0DDE48FED377}.HostedService|Any CPU.ActiveCfg = Debug|Any CPU
+		{76009D87-4ACB-4144-837D-0DDE48FED377}.HostedService|Any CPU.Build.0 = Debug|Any CPU
+		{76009D87-4ACB-4144-837D-0DDE48FED377}.HttpModule|Any CPU.ActiveCfg = Debug|Any CPU
+		{76009D87-4ACB-4144-837D-0DDE48FED377}.HttpModule|Any CPU.Build.0 = Debug|Any CPU
 		{76009D87-4ACB-4144-837D-0DDE48FED377}.Supply|Any CPU.ActiveCfg = Debug|Any CPU
 		{76009D87-4ACB-4144-837D-0DDE48FED377}.Supply|Any CPU.Build.0 = Debug|Any CPU
-								
-		{E5E61005-7BE7-4EE1-817E-F5DA80C34D7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E5E61005-7BE7-4EE1-817E-F5DA80C34D7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E5E61005-7BE7-4EE1-817E-F5DA80C34D7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E5E61005-7BE7-4EE1-817E-F5DA80C34D7E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E5E61005-7BE7-4EE1-817E-F5DA80C34D7E}.Supply|Any CPU.ActiveCfg = Debug|Any CPU
-		{E5E61005-7BE7-4EE1-817E-F5DA80C34D7E}.Supply|Any CPU.Build.0 = Debug|Any CPU
+		
+#endif
+#if (IsHttpModuleBuildpack)					
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Release|Any CPU.Build.0 = Release|Any CPU
+#if (false)
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Supply|Any CPU.ActiveCfg = Supply|Any CPU
-		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Supply|Any CPU.Build.0 = Supply|Any CPU
+		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Final|Any CPU.ActiveCfg = Final|Any CPU
+		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.HttpModule|Any CPU.ActiveCfg = HttpModule|Any CPU
+		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.HttpModule|Any CPU.Build.0 = HttpModule|Any CPU
+		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.HostedService|Any CPU.ActiveCfg = HostedService|Any CPU
+#endif
+#endif
+#if (IsHostedServiceBuildpack)
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.Release|Any CPU.Build.0 = Release|Any CPU
+#if (false)
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.Supply|Any CPU.ActiveCfg = Supply|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.Supply|Any CPU.Build.0 = Supply|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.Final|Any CPU.ActiveCfg = Final|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.Final|Any CPU.Build.0 = Final|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.HttpModule|Any CPU.ActiveCfg = HttpModule|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.HttpModule|Any CPU.Build.0 = HttpModule|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.HostedService|Any CPU.ActiveCfg = HostedService|Any CPU
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.HostedService|Any CPU.Build.0 = HostedService|Any CPU
+#endif
+#endif
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -104,12 +182,18 @@ Global
 		{512F3F46-B79C-40C7-B148-7E1DDDE3DA54} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
 		{F6E63DDE-EC41-4756-A6A3-7BF6A3ACC172} = {A989B8EF-B8C1-4BA9-BF91-B3B0529E4584}
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003} = {FEBA1EBA-2A0C-4AEA-AB03-441C9A48A996}
-		
+
+#if (false)
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9} = {FEBA1EBA-2A0C-4AEA-AB03-441C9A48A996}
 		{16790A3E-4915-4B48-8B20-37591CAE1EF5} = {A989B8EF-B8C1-4BA9-BF91-B3B0529E4584}
 		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
 		{76009D87-4ACB-4144-837D-0DDE48FED377} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
-		{E5E61005-7BE7-4EE1-817E-F5DA80C34D7E} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
+#endif
+#if (IsHttpModuleBuildpack)
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
+#endif
+#if (IsHostedServiceBuildpack)	
+		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
+#endif
 	EndGlobalSection
 EndGlobal

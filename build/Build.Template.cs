@@ -10,9 +10,17 @@ using Serilog;
 
 partial class Build
 {
-
-    [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
-    readonly string Config = IsLocalBuild ? Configuration.Debug : Configuration.Release;
+#if (IsFinalBuildpack)
+    public string Configuration => "Final";
+#elif(IsSupplyBuildpack)
+    public string Configuration => "Supply";
+#elif(IsHttpModuleBuildpack)
+    public string Configuration => "HttpModule";
+#elif(IsHostedServiceBuildpack)
+    public string Configuration => "HostedService";
+#endif
+    // [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
+    // readonly string Config = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
     [Parameter(("NuGet API Configuration Key"))]
     readonly string NugetApiKey = null!;

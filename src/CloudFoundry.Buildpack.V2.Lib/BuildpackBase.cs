@@ -69,6 +69,7 @@ public abstract class BuildpackBase
         FileSystemTasks.EnsureExistingDirectory(context.TargetDependenciesDirectory);
         var profiled = context.BuildDirectory / ".profile.d";
         FileSystemTasks.EnsureExistingDirectory(profiled);
+        InstallStartupEnvVars(profiled, context.BuildpackIndex, false);
         if (IsPreStartOverridden) 
         {
             // copy buildpack to deps dir so we can invoke it as part of startup
@@ -97,7 +98,6 @@ public abstract class BuildpackBase
             {
                 File.WriteAllText(profiled.CurrentAbsolutePath / $"{startupScriptName}.bat", $@"%DEPS_DIR%\{context.BuildpackIndex}\{prestartCommand} {context.BuildpackIndex}");
             }
-            InstallStartupEnvVars(profiled, context.BuildpackIndex, false);
             GetEnvScriptFile(profiled, context.BuildpackIndex, true); // causes empty env file to be created so it can (potentially) be populated with vars during prestart hook
         }
             

@@ -4,8 +4,6 @@
         <TargetFramework>net48</TargetFramework>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
         <LangVersion>latest</LangVersion>
-        <Configurations>Debug;Release;Supply</Configurations>
-        <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
 
     <ItemGroup>

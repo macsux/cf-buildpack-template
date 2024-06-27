@@ -13,25 +13,27 @@
         <TargetFrameworks>net8.0;net48</TargetFrameworks>
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <IsPackable>false</IsPackable>
-        <Configurations>Debug;Release;Supply</Configurations>
-        <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
+    <!--#if (false) -->
+    <PropertyGroup Condition="$(Configuration) == 'HttpModule'">
+        <TargetFramework>net48</TargetFramework>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(Configuration) == 'HostedService'">
+<!--        <TargetFramework>net8.0</TargetFramework>-->
+    </PropertyGroup>
+    <!--#endif -->
     <PropertyGroup Condition="$(TargetFramework) != 'net48'">
         <PublishTrimmed>true</PublishTrimmed>
         <PublishSingleFile>true</PublishSingleFile>
     </PropertyGroup>
-    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-      <DefineConstants>TRACE;IsHttpModuleBuildpack</DefineConstants>
-    </PropertyGroup>
+
     <ItemGroup>
       <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.48-alpha">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
         
-        <!--#if (IsHttpModuleBuildpack) -->
-      <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Lib.HttpModule\CloudFoundry.Buildpack.V2.Lib.HttpModule.csproj" />
-        <!--#endif -->
+
     </ItemGroup>
     <ItemGroup Condition="'$(UsePackages)' == 'false'">
         <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Analyzers\CloudFoundry.Buildpack.V2.Analyzers.csproj"

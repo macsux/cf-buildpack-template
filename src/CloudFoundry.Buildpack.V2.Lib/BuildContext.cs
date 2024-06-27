@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using JetBrains.Annotations;
 using NMica.Utils.IO;
@@ -8,25 +9,30 @@ namespace CloudFoundry.Buildpack.V2;
 [PublicAPI]
 public sealed class BuildContext : BuildpackContext
 {
-    internal BuildContext()
-    {
-    }
 
-    public VariablePath BuildDirectory { get; internal set; } = null!;
-    public VariablePath ContainerDependenciesDirectory { get; internal set; } = null!;
-    public VariablePath CacheDirectory { get; internal set; } = null!;
-    public int BuildpackIndex { get; internal set; }
+    public VariablePath BuildDirectory { get; set; } = null!;
+    /// <summary>
+    /// Buildpack's `/lib` folder
+    /// </summary>
+    public VariablePath BuildpackLibDirectory { get; set; } = (VariablePath)(EntrypointExecutable.Parent.Parent / "lib").ToString();
+    /// <summary>
+    /// Folder where buildpacks contribute dependencies to. Each subfolder is index of buildpack that ran. Normally this folder is "~/deps" in container
+    /// </summary>
+    public VariablePath ContainerDependenciesDirectory { get; set; } = null!;
+    public VariablePath CacheDirectory { get; set; } = null!;
+    public int BuildpackIndex { get; set; }
     /// <summary>
     /// Dependency directory for CURRENT buildpack (deps/{index})
     /// </summary>
     public VariablePath TargetDependenciesDirectory => ContainerDependenciesDirectory / BuildpackIndex.ToString();
     public bool IsFinalize { get; set; }
     
-    public AbsolutePath SourceDependenciesDirectory => EntrypointExecutable.Parent.Parent / "dependencies";
+    public AbsolutePath SourceDependenciesDirectory { get; set; } = EntrypointExecutable.Parent.Parent / "dependencies";
     public AbsolutePath GetDependencyDirectory(string name) => Directory.Exists(SourceDependenciesDirectory / name) ? SourceDependenciesDirectory / name : SourceDependenciesDirectory / BitConverter.ToString(_md5.ComputeHash(Encoding.ASCII.GetBytes(name))).ToLower().Replace("-", "");
     static MD5 _md5 = MD5.Create();
 
-    public void InstallDependency(string name, string targetDir)
+    //todo: finish this method
+    private void InstallDependency(string name, string targetDir)
     {
         if (!Path.IsPathRooted(targetDir))
         {

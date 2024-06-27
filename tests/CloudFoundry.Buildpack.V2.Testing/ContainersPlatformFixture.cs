@@ -71,6 +71,12 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         {
             builder = builder.WithEnvironment(key, value);
         }
+
+        if (OutputStream == null)
+        {
+            throw new InvalidOperationException(
+                "OutputStream is not set. Inject `ITestOutputHelper output` into your test class and add 'fixture.OutputStream = new TestOutputStream(output);' to your constructor");
+        }
         return builder
             .WithImage(ContainerImage)
             .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
