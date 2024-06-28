@@ -40,10 +40,6 @@
 
   <ItemGroup Condition="'$(UsePackages)' == 'false'">
     <ProjectReference Include="..\CloudFoundry.Buildpack.V2.Build\CloudFoundry.Buildpack.V2.Build.csproj" />
-    <PackageReference Include="NuGet.CommandLine" Version="6.9.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup Condition="'$(UsePackages)' == 'true'">
     <PackageReference Include="CloudFoundry.Buildpack.V2.Build" Version="4.*"/>

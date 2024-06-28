@@ -42,10 +42,11 @@ partial class Build
 
     
     AbsolutePath TemplatePackage => ArtifactsDirectory / $"{NugetPackageId}.{TemplateVersion.NuGetPackageVersion}.nupkg";
-    AbsolutePath LifecyclePackage => ArtifactsDirectory / $"{NugetPackageId}.{LifecycleVersion.NuGetPackageVersion}.nupkg";
-    AbsolutePath BuildPackage => ArtifactsDirectory / $"{NugetPackageId}.{BuildVersion.NuGetPackageVersion}.nupkg";
-    AbsolutePath LibPackage => ArtifactsDirectory / $"{NugetPackageId}.{LibVersion.NuGetPackageVersion}.nupkg";
-    AbsolutePath AnalyzerPackage => ArtifactsDirectory / $"{NugetPackageId}.{AnalyzerVersion.NuGetPackageVersion}.nupkg";
+    AbsolutePath LifecyclePackage => ArtifactsDirectory / $"{NugetPackageId}.Lifecycle.{LifecycleVersion.NuGetPackageVersion}.nupkg";
+    AbsolutePath TestPackage => ArtifactsDirectory / $"{NugetPackageId}.Testing.{TestVersion.NuGetPackageVersion}.nupkg";
+    AbsolutePath BuildPackage => ArtifactsDirectory / $"{NugetPackageId}.Build.{BuildVersion.NuGetPackageVersion}.nupkg";
+    AbsolutePath LibPackage => ArtifactsDirectory / $"{NugetPackageId}.Lib.{LibVersion.NuGetPackageVersion}.nupkg";
+    AbsolutePath AnalyzerPackage => ArtifactsDirectory / $"{NugetPackageId}.Analyzers.{AnalyzerVersion.NuGetPackageVersion}.nupkg";
 
     protected override void OnBuildInitialized()
     {
@@ -150,10 +151,17 @@ partial class Build
         {
             
             Assert.True(File.Exists(TemplatePackage), $"{TemplatePackage} not found");
-            NuGetTasks.NuGetPush(s => s
-                .SetSource(NuGetSource)
-                .SetTargetPath(TemplatePackage)
-                .SetApiKey(NugetApiKey));
-            Log.Logger.Block($"Package '{NugetPackageId}' version {TemplateVersion.NuGetPackageVersion} published to {NuGetSource}");
+            var packages = new []{ TemplatePackage, LifecyclePackage, BuildPackage, AnalyzerPackage, LibPackage, TestPackage };
+            foreach (var package in packages)
+            {
+                NuGetTasks.NuGet($"push {package} -Source {NuGetSource} -ApiKey {NugetApiKey} -SkipDuplicate");
+            }
+
+            // NuGetTasks.NuGetPush(s => s
+            //     .SetSource(NuGetSource)
+            //     .SetApiKey(NugetApiKey)
+            //     .CombineWith(packages, (o,oo) => o
+            //         .SetTargetPath(oo)));
+            // Log.Logger.Block($"Package '{NugetPackageId}' version {TemplateVersion.NuGetPackageVersion} published to {NuGetSource}");
         });
 }
