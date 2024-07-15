@@ -9,7 +9,7 @@ public class MyBuildpackStartupInjector: IHostingStartup, IStartupFilter
 {
     public void Configure(IWebHostBuilder builder)
     {
-        Console.WriteLine("Hello from injector1");
+        Console.WriteLine("Hello from injector");
         builder.ConfigureServices(c => c.AddTransient<IStartupFilter, MyBuildpackStartupInjector>());
 
     }

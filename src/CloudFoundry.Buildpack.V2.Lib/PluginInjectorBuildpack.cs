@@ -25,12 +25,14 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 	public override void PreStartup(PreStartupContext context)
 	{
 		//Console.WriteLine(new StackTrace().ToString());
-		Console.WriteLine($"PID: {Process.GetCurrentProcess().Id}");
 		Console.WriteLine("Adjusting runtimeconfig.json to probe nuget folder when resolving dependencies");
+		// if it was compiled from source, the app ends up in final buildpacks deps dir under dotnet_publish subfolder. in all other cases it's in it's regular spot: /home/vcap/app
 		var publishDir = (AbsolutePath)Directory.EnumerateDirectories("/home/vcap/deps").OrderBy(x => x).Last() / "dotnet_publish";
+		if (!Directory.Exists(publishDir))
+			publishDir = (AbsolutePath)"/home/vcap/app";
 		foreach (var runtimeConfigFile in Directory.EnumerateFiles(publishDir, "*.runtimeconfig.json"))
 		{
-
+			// add path to nuget folder as part of "additionalProbingPaths" in runtimeconfig.json so extra assemblies we introduce from plugins can be resolved from there
 			var runtimeConfig = JObject.Parse(File.ReadAllText(runtimeConfigFile));
 			var runtimeOptions = (JObject)runtimeConfig["runtimeOptions"]!;
 			var probingPathsProperty = runtimeOptions["additionalProbingPaths"];
@@ -62,11 +64,23 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 			foreach (var additionalDepFile in additionalDeps)
 			{
 				var additionalDepJson = JObject.Parse(File.ReadAllText(additionalDepFile));
+				// if our additional deps targets something like .NETCoreApp,Version=v8.0 when primary app is targeting .NETCoreApp,Version=v8.0/linux-x64,
+				// make the secondary deps RID specific as part of the merge
 				if(isTargetRidSpecific && additionalDepJson.SelectToken($"targets.{runtimeTarget}") == null)
 				{
 					var framework = runtimeTarget.Split('/')[0];
 					var frameworkProperty = (JProperty?)additionalDepJson.SelectToken($"targets.['{framework}']")?.Parent;
-					frameworkProperty?.Replace(new JProperty(runtimeTarget, frameworkProperty.Value));
+					var newFrameworkProperty = new JProperty(runtimeTarget, frameworkProperty?.Value);
+					frameworkProperty?.Replace(newFrameworkProperty);
+					frameworkProperty = newFrameworkProperty;
+				}
+				// adjust all nodes under /libraries that do not have "path" set. set this to lowercase library name, which should follow nuget folder convention
+				var libraries = additionalDepJson.Property("libraries")?.Value as JObject;
+				var libsWithoutPath = libraries?.Properties().Where(x => ((JObject)x.Value).Property("path") == null);
+				foreach(var lib in libsWithoutPath ?? Array.Empty<JProperty>())
+				{
+					if(lib.Value is JObject val)
+						val["path"] = lib.Name.ToLower();
 				}
 				
 				mergedDeps.Merge(additionalDepJson);
