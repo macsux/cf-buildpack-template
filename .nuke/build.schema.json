@@ -6,6 +6,10 @@
     "build": {
       "type": "object",
       "properties": {
+        "BuildpackLocation": {
+          "type": "string",
+          "description": "Location of the buildpack to be turned into offline buildpack"
+        },
         "Continue": {
           "type": "boolean",
           "description": "Indicates to continue a previously failed build attempt"
@@ -87,6 +91,7 @@
               "BuildInjectors",
               "EnsureCleanWorkDirectory",
               "GithubRelease",
+              "MakeOffline",
               "Publish",
               "PublishBuildpack",
               "PublishTemplate",
@@ -115,6 +120,7 @@
               "BuildInjectors",
               "EnsureCleanWorkDirectory",
               "GithubRelease",
+              "MakeOffline",
               "Publish",
               "PublishBuildpack",
               "PublishTemplate",

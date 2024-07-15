@@ -1,6 +1,4 @@
-This project offers simplified way of creating buildpacks for Cloud Foundry in .NET
-
-Buildpacks fall into two categories: supply and final. Supply buildpacks can be chained to supply dependencies to the app or modify its configuration. They essentially act as middleware. Final buildpack is the one that is launched in the end of the buildpack chain and is responsible for telling Cloud Foundry the startup command for the application.
+This project offers simplified way of creating buildpacks for Cloud Foundry in .NET. It implements V2 buildpack spec.
 
 ## Quick Start
 
@@ -10,49 +8,48 @@ This is a template project that can be used by DotNet CLI to boostrap a new buil
 dotnet new -i CloudFoundry.Buildpack.V2
 ```
 
-The embedded build scripts rely on Git to do versioning through the use of [GitVersion](https://gitversion.readthedocs.io/en/latest/). This means that you need to initialize a git repo and create at least one commit
+Then create a new project from the template:
 
-```shell
-git init
-git add .
-git commit -m Initial
 ```
+dotnet new buildpack --name MyFancyBuildpack --BuildpackType <supply|final|httpmodule|hostedservice>
+```
+
+There are 4 types of buildpacks template supports:
+
+- `supply` - used in multi-buildpack scenarios. Contributes to container creation but doesn't control how app starts. Must be explicitly specified when staging or in manifest. Does not participate in detection. The last buildpack in manifest must be of type "final" such (such as one of the core buildpacks that ship with Cloud Foundry)
+- `final` - Last buildpack (or only buildpack) that contributes dependencies and also controls the start command of the app. Must implement detect method and set launch command. Only one final buildpack can be selected during staging
+- `httpmodule` - Specialized buildpack for Windows .NET Framework ASP.NET apps that allows installing .NET code that runs inside application process. This is installed as `httpmodule` and can modify the behavior of the running application.
+- `hostedservice` - Specialized buildpack for ASP.NET Core apps that allows installing .NET code that runs inside application process. It allows full access to application's `IWebHostBuilder` allowing buildpack to contribute middleware and service container dependencies to ASP.NET Core apps.
 
 #### How to implement
 
-Start with `MyBuilpack` class. Depending on the type of buildpack you're creating, inherit either from `SupplyBuildpack` or `FinalBuildpack` and implement the `Detect`, `Apply`, and in the case of final buildpack the `GetStartupCommand`.
+Start with `MyBuilpackBuildpack` class in `MyBuildpack` project. The stub methods should already be there and simple examples on how to use. 
 
 ## How to package
 
-Included build packaging is based on Nuke.Build project. Either use the included build shell scripts, or install IDE plugins to run included targets. Get full list of useful targets and parameters with `--help` argument for the build script. 
+Included build packaging is automated using Nuke.Build project. Either use the included build shell scripts in root folder with name of target you're your trying to invoke. Get full list of useful targets and parameters with `--help` argument for the build script. 
 
-You can build buildpack that are compatible with both Windows and Linux stacks, however when targeting Windows stack it can only be compiled on a Windows machine.
-
-The provided build script accepts one argument to specify the stack you're targeting. Windows stack will leverage .NET Framework (which is already included in the stemcell), resulting in smaller buildpack. When targeting Linux, the buildpack will be assembled with .NET core as self-contained (resulting in ~22mb package).
-
-### Compiling on Windows
+### Usage on Windows
 
 ```powershell
-.\build.ps1 --stack windows
-```
-
-or
-
-```powershell
-.\build.ps1 --stack linux
+.\build.ps1 <TARGET_NAME> (--arg1 VALUE --arg2 VALUE)
 ```
 
 ### Compiling on Linux or Mac
 
 ```bash
-./build.sh --stack linux
+./build.sh <TARGET_NAME> (--arg1 VALUE --arg2 VALUE)
 ```
 
-Final output will be placed in `/artifacts` folder
+The following targets are provided out of the box:
 
-## How to Release
+- `Publish` - compiles the buildpack and places version stamped zip file in `/artifacts` folder. Additionally generates a copy of the buildpack in `/artifacts/latest/<STACK>/buildpack.zip` folder that allows easy reference in tests (filename doesn't change as version increments). By default the buildpack will compile for both Linux and Windows based stacks. You can control it via `stack` argument or hardcoded it to just one inside `Build.cs`.
+- `ReleaseGithub` - if remote repo is set, allows compiled buildpack to be published as Github release. This simplifies testing in Cloud Foundry as the URL to the buildpack zip file can just be used directly inside the manifest. You must provided GitHub API Key as `git-hub-token` parameter (or set via environmental variable `GitHubToken`).
+- `MakeOffline` - packages a thin buildpack that would normally download additional dependencies during staging into "offline" one that bundles all the dependencies with it. This is useful for installing buildpacks into disconnected environments and speeds up local testing. The buildpack is specified via `BuildpackLocation` argument which can be a local file or uri.
 
-Use the embedded `Release` target to create and publish buildpack as asset to GitHub releases. This requires you have remote repo set and have specified API Key as parameter (or set via environmental variable).
+## Testing
+
+The template includes ability to simulate staging and running of the droplet locally inside docker using TestContainers framework. This simplifies testing by allowing validation of buildpack's behavior locally without having to rely on integration tests inside TAS. By combining both the staging piece and the run piece, you can simulate full `cf push` lifecycle and examine the behavior of test applications after buildpacks were applied. The generated tests as part of the template should provide a pattern on how to use. For each test run the test projects `bin` folder will have a unique folder created with droplet output you can examine.
 
 ## How to use
 

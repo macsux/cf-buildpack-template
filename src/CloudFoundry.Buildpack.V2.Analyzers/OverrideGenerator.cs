@@ -31,7 +31,7 @@ public class OverrideGenerator : ISourceGenerator
                 {
                     Class = x.Syntex,
                     Namespace = x.Model.ContainingNamespace,
-                    IsPreStartupOverriden = x.Syntex.DescendantNodes().OfType<MethodDeclarationSyntax>().Any(y => y.Identifier.Text == "PreStartup" && y.Modifiers.Any(SyntaxKind.OverrideKeyword))
+                    IsPreStartupOverriden = x.Model.BaseType?.Name == "PluginInjectorBuildpack" || x.Syntex.DescendantNodes().OfType<MethodDeclarationSyntax>().Any(y => y.Identifier.Text == "PreStartup" && y.Modifiers.Any(SyntaxKind.OverrideKeyword))
                 })
             .ToList();
 

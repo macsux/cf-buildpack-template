@@ -15,8 +15,7 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
         var appDir = RootDirectory / "tests" / "fixtures" / "dotnetapp";
         var stagingContext = _fixture.CreateStagingContext(appDir);
         stagingContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "linux-x64" / "buildpack.zip");
-        // you can download dotnet core buildpack off pivnet https://network.pivotal.io/products/dotnet-core-buildpack/
-        stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "dotnet-core_buildpack-cached-cflinuxfs4-v2.4.22+1707253006.zip");
+        stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "dotnet-core-buildpack.zip");
         stagingContext.SkipDetect = true;
         var stageResult = await _fixture.Stage(stagingContext, _output);
 
@@ -40,8 +39,7 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
         var stagingContext = _fixture.CreateStagingContext(appDir);
 
         stagingContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "linux-x64" / "buildpack.zip");
-        // grab a copy of below buildpack here: https://github.com/cloudfoundry/staticfile-buildpack/releases/download/v1.6.10/staticfile-buildpack-cflinuxfs4-v1.6.10.zip
-        stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "staticfile-buildpack-cflinuxfs4-v1.6.10.zip");
+        stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "staticfile-buildpack.zip");
         stagingContext.SkipDetect = true;
         var stageResults = await _fixture.Stage(stagingContext, _output);
         // assert staging results
@@ -65,8 +63,9 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
     {
         var appDir = RootDirectory / "tests" / "fixtures" / "dotnetapp";
         var stagingContext = _fixture.CreateStagingContext(appDir);
-        // you can download dotnet core buildpack off pivnet https://network.pivotal.io/products/dotnet-core-buildpack/
-        stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "dotnet-core_buildpack-cached-cflinuxfs4-v2.4.22+1707253006.zip");
+        // use your own buildpack below - dotnet-core-buildpack is provided as an example of working final buildpack for test structure purposes
+        // stagingContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "linux-x64" / "buildpack.zip");
+        stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "dotnet-core-buildpack.zip");
         var stageResult = await _fixture.Stage(stagingContext, _output);
 
         var dropletDir = stageResult.DropletDirectory;

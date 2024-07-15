@@ -44,10 +44,5 @@ public partial class MyBuildpackBuildpack : PluginInjectorBuildpack
     //     Console.WriteLine("Application is about to start...");
     //     EnvironmentalVariables["MY_SETTING"] = "value"; // can set env vars before app starts running
     // }
-#else
-    public override void PreStartup(PreStartupContext context)
-    {
-        base.PreStartup(context);
-    }
 #endif
 }

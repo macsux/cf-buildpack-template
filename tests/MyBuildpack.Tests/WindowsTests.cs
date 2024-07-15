@@ -77,8 +77,7 @@ public class WindowsTests(ITestOutputHelper output, WindowsStackFixture fixture)
         var stageContext = _fixture.CreateStagingContext(appDir);
 
         stageContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "win-x64" / "buildpack.zip");
-        // grab a copy of hwc buildpack (lightweight IIS) here https://network.pivotal.io/products/hwc-buildpack/ and download it to dir below
-        stageContext.Buildpacks.Add(RootDirectory / "artifacts" / "hwc_buildpack-cached-windows-v3.1.34+1702922614.zip");
+        stageContext.Buildpacks.Add(RootDirectory / "artifacts" / "hwc_buildpack.zip");
         stageContext.SkipDetect = true;
         var stageResults = await _fixture.Stage(stageContext, _output);
         

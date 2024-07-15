@@ -12,7 +12,8 @@ partial class Build : NukeBuild,
     IAssemblyInject,
 #endif
     IPublishBuildpack, 
-    IReleaseGithub 
+    IReleaseGithub,
+    IMakeOfflineBuildpack
 {
     [Solution] public Solution Solution { get; set; } = null!;
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
@@ -44,7 +45,8 @@ partial class Build : NukeBuild,
 
 
 
-
+    // uncomment below to extend build process
+    
     // Target PublishBuildpack => _ => _
     //     .DependsOn<IPublishBuildpack>(x => x.PublishBuildpack)
     //     .DependsOn<IAssemblyInject>(x => x.BuildHttpModule)
