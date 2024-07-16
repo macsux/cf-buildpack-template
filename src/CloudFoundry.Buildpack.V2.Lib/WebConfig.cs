@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Xml;
 using NMica.Utils.IO;
 
@@ -51,6 +52,8 @@ internal class WebConfig : IDisposable
 
         return node;
     }
+    [UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Assembly load is only used to read assembly name which should be trim safe")]
+
     public void CreateAssemblyBindings(VariablePath assembliesDir)
     {
         var libraryFiles = Directory.EnumerateFiles(assembliesDir, "*.dll", SearchOption.AllDirectories).ToList();

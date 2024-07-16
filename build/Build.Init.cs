@@ -8,9 +8,11 @@ using Serilog;
 
 partial class Build
 {
+    
     // ensure git repo is initialized if we try to build immediately after creating template
     protected override void OnBuildCreated()
     {
+        HttpTasks.DefaultTimeout = TimeSpan.FromMinutes(5);
         try
         {
             GitTasks.Git("status", workingDirectory: RootDirectory, logOutput: false, logInvocation: false);

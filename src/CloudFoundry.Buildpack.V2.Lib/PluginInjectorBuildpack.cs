@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -23,6 +24,7 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 
 	}
 
+	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Only strings are used with JsonArray.Add method")]
 	public override void PreStartup(PreStartupContext context)
 	{
 		    //Console.WriteLine(new StackTrace().ToString());
