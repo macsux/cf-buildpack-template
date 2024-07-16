@@ -3,10 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Web;
 using JetBrains.Annotations;
-using Newtonsoft.Json.Linq;
+// using Newtonsoft.Json.Linq;
 using NMica.Utils.IO;
 
 namespace CloudFoundry.Buildpack.V2;
@@ -24,69 +25,72 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 
 	public override void PreStartup(PreStartupContext context)
 	{
-		//Console.WriteLine(new StackTrace().ToString());
-		Console.WriteLine("Adjusting runtimeconfig.json to probe nuget folder when resolving dependencies");
-		// if it was compiled from source, the app ends up in final buildpacks deps dir under dotnet_publish subfolder. in all other cases it's in it's regular spot: /home/vcap/app
-		var publishDir = (AbsolutePath)Directory.EnumerateDirectories("/home/vcap/deps").OrderBy(x => x).Last() / "dotnet_publish";
-		if (!Directory.Exists(publishDir))
-			publishDir = (AbsolutePath)"/home/vcap/app";
-		foreach (var runtimeConfigFile in Directory.EnumerateFiles(publishDir, "*.runtimeconfig.json"))
-		{
-			// add path to nuget folder as part of "additionalProbingPaths" in runtimeconfig.json so extra assemblies we introduce from plugins can be resolved from there
-			var runtimeConfig = JObject.Parse(File.ReadAllText(runtimeConfigFile));
-			var runtimeOptions = (JObject)runtimeConfig["runtimeOptions"]!;
-			var probingPathsProperty = runtimeOptions["additionalProbingPaths"];
-			var probingPaths = probingPathsProperty?.Value<JArray>() ?? new();
-			if (probingPathsProperty == null)
-			{
-				probingPathsProperty = new JProperty("additionalProbingPaths", probingPaths);
-				runtimeOptions.Add(probingPathsProperty);
-			}
-			//  
-			var nugetPackageDir = new JValue("/home/vcap/app/.nuget/packages");
-			if (!probingPaths.ToList().Contains(nugetPackageDir))
-			{
-				probingPaths.Add(nugetPackageDir);
-			}
+		    //Console.WriteLine(new StackTrace().ToString());
+	    Console.WriteLine("Adjusting runtimeconfig.json to probe nuget folder when resolving dependencies");
+	    // if it was compiled from source, the app ends up in final buildpacks deps dir under dotnet_publish subfolder. in all other cases it's in it's regular spot: /home/vcap/app
+	    AbsolutePath publishDir = (AbsolutePath)"/home/vcap/app"; 
+	    if(Directory.Exists("/home/vcap/deps"))
+	        publishDir = (AbsolutePath)Directory.EnumerateDirectories("/home/vcap/deps").OrderBy(x => x).Last() / "dotnet_publish";
+	    if (!Directory.Exists(publishDir))
+	        publishDir = (AbsolutePath)"/home/vcap/app";
 
-			File.WriteAllText(runtimeConfigFile, runtimeConfig.ToString());
-		}
+	    foreach (var runtimeConfigFile in Directory.EnumerateFiles(publishDir, "*.runtimeconfig.json"))
+	    {
+	        // add path to nuget folder as part of "additionalProbingPaths" in runtimeconfig.json so extra assemblies we introduce from plugins can be resolved from there
+	        var runtimeConfig = JsonNode.Parse(File.ReadAllText(runtimeConfigFile))!;
+	        var runtimeOptions = runtimeConfig["runtimeOptions"]!;
+	        var probingPaths = runtimeOptions["additionalProbingPaths"]?.AsArray();
+	        if (probingPaths == null)
+	        {
+	            probingPaths = new JsonArray();
+	            runtimeOptions["additionalProbingPaths"] = probingPaths;
+	        }
+	        
+	        var nugetPackageDir = "/home/vcap/app/.nuget/packages";
+	        if (!probingPaths.Select(x => x!.ToString()).Any(x => x == nugetPackageDir))
+	        {
+	            probingPaths.Add(JsonValue.Create(nugetPackageDir));
+	        }
+	        File.WriteAllText(runtimeConfigFile, runtimeConfig.ToString());
+	    }
+	    
+	    var additionalDeps = Environment.GetEnvironmentVariable("DOTNET_ADDITIONAL_DEPS")?.Split(';') ?? Array.Empty<string>();
+	    // var additionalDeps = new[]{@"C:\projects\MyWebApi\bin\Debug\net8.0\MyWebApi.deps.json"};
+	    //todo: determine primary deps file
+	    foreach (var appDepsFile in Directory.EnumerateFiles(publishDir, "*.deps.json"))
+	    {
+	        JsonNode appDepsJson = JsonNode.Parse(File.ReadAllText(appDepsFile))!;
+	        string runtimeTarget = appDepsJson["runtimeTarget"]!["name"]?.ToString()! ?? throw new Exception($"Unable to read runtimeTarget.name from {appDepsFile}");
+	        var isTargetRidSpecific = runtimeTarget.Contains("/");
+	        var mergedDeps = new JsonObject();
 
-		var additionalDeps = Environment.GetEnvironmentVariable("DOTNET_ADDITIONAL_DEPS")?.Split(';') ?? Array.Empty<string>();
-		//todo: determine primary deps file
-		foreach (var appDepsFile in Directory.EnumerateFiles(publishDir, "*.deps.json"))
-		{
-			var appDepsJson = JObject.Parse(File.ReadAllText(appDepsFile));
-			string runtimeTarget = appDepsJson.SelectToken("runtimeTarget.name")?.ToString()! ?? throw new Exception($"Unable to read runtimeTarget.name from {appDepsFile}");
-			var isTargetRidSpecific = runtimeTarget.Contains("/");
-			var mergedDeps = new JObject();
-			
-			foreach (var additionalDepFile in additionalDeps)
-			{
-				var additionalDepJson = JObject.Parse(File.ReadAllText(additionalDepFile));
-				// if our additional deps targets something like .NETCoreApp,Version=v8.0 when primary app is targeting .NETCoreApp,Version=v8.0/linux-x64,
-				// make the secondary deps RID specific as part of the merge
-				if(isTargetRidSpecific && additionalDepJson.SelectToken($"targets.{runtimeTarget}") == null)
-				{
-					var framework = runtimeTarget.Split('/')[0];
-					var frameworkProperty = (JProperty?)additionalDepJson.SelectToken($"targets.['{framework}']")?.Parent;
-					var newFrameworkProperty = new JProperty(runtimeTarget, frameworkProperty?.Value);
-					frameworkProperty?.Replace(newFrameworkProperty);
-					frameworkProperty = newFrameworkProperty;
-				}
-				// adjust all nodes under /libraries that do not have "path" set. set this to lowercase library name, which should follow nuget folder convention
-				var libraries = additionalDepJson.Property("libraries")?.Value as JObject;
-				var libsWithoutPath = libraries?.Properties().Where(x => ((JObject)x.Value).Property("path") == null);
-				foreach(var lib in libsWithoutPath ?? Array.Empty<JProperty>())
-				{
-					if(lib.Value is JObject val)
-						val["path"] = lib.Name.ToLower();
-				}
-				
-				mergedDeps.Merge(additionalDepJson);
-			}
-			
-			mergedDeps.Merge(appDepsJson); // merge primary deps last so it takes precedence over all supplimentary ones
+	        foreach (var additionalDepFile in additionalDeps)
+	        {
+	            JsonNode additionalDepJson = JsonNode.Parse(File.ReadAllText(additionalDepFile))!;
+	            // if our additional deps targets something like .NETCoreApp,Version=v8.0 when primary app is targeting .NETCoreApp,Version=v8.0/linux-x64,
+	            // make the secondary deps RID specific as part of the merge
+	            //additionalDepJson.Dump();
+
+	            if (isTargetRidSpecific && additionalDepJson["targets"]![runtimeTarget] == null)
+	            {
+	                var framework = runtimeTarget.Split('/')[0];
+	                var frameworkProperty = additionalDepJson["targets"]![framework]!.AsObject();
+	                additionalDepJson["targets"]!.AsObject().Remove(framework);
+	                additionalDepJson["targets"]![runtimeTarget] = frameworkProperty;
+	            }
+	            // adjust all nodes under /libraries that do not have "path" set. set this to lowercase library name, which should follow nuget folder convention
+	            var libraries = additionalDepJson["libraries"]!.AsObject();
+	            var libsWithoutPath = libraries.AsEnumerable().Where(x => x.Value!["path"] == null);
+	            
+	            foreach (var lib in libsWithoutPath)
+	            {
+	                var libName = lib.Key;
+	                libraries[libName]!["path"] = libName.ToLower();
+	            }
+	            mergedDeps.Merge(additionalDepJson);
+	        }
+
+	        mergedDeps.Merge(appDepsJson);
 			File.WriteAllText(appDepsFile, mergedDeps.ToString());
 		}
 
