@@ -52,7 +52,11 @@ public interface IMakeOfflineBuildpack : IBuildpackBase
                 }
 
                 inputBuildpackLocation = ArtifactsDirectory / buildpackFilename;
-                HttpTasks.HttpDownloadFile(remoteLocation, inputBuildpackLocation);
+                HttpTasks.HttpDownloadFile(remoteLocation, inputBuildpackLocation, clientConfigurator: client =>
+                {
+                    client.Timeout = TimeSpan.FromMinutes(5);
+                    return client;
+                });
             }
 
             var offlineBuildpackFileName = offlineBuildpackName == null ? $"{Path.GetFileNameWithoutExtension(buildpackFilename)}-offline.zip" : $"{offlineBuildpackName}.zip";
