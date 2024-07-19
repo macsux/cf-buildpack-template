@@ -7,6 +7,8 @@ public class LaunchContext : CloudFoundryContainerContext
     public override AbsolutePath ApplicationDirectory => DropletDirectory / "app";
     public AbsolutePath DependenciesDirectory => DropletDirectory / "deps";
     public AbsolutePath ProfileDDirectory => DropletDirectory / "profile.d";
+    public AbsolutePath TemporaryDirectory => DropletDirectory / "tmp";
+
     internal LaunchContext(AbsolutePath dropletDirectory, CloudFoundryStack stack)
     {
         DropletDirectory = dropletDirectory;

@@ -117,6 +117,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
                 .WithResourceMapping(new DirectoryInfo(context.ProfileDDirectory), (RemoteHome / ".profile.d").AsLinuxPath())
                 .WithBindMount(context.ApplicationDirectory, RemoteHome / "app")
                 .WithBindMount(context.DependenciesDirectory,  RemoteHome / "deps")
+                .WithBindMount(context.TemporaryDirectory,  RemoteHome / "tmp")
                 .WithEnvironment("DEPS_DIR", (RemoteHome / "deps").AsLinuxPath())
                 .WithEnvironment("HOME", RemoteHome / "app")
                 .WithWaitStrategy(waitStrategy)
