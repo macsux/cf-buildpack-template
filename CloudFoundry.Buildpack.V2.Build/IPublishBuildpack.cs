@@ -44,7 +44,7 @@ public interface IPublishBuildpack : IBuildpackBase
                 );
             }
         });
-    
+
     Target PublishBuildpack => _ => _
         .Description("Packages buildpack in Cloud Foundry expected format into /artifacts directory")
         .DependsOn(Publish, EnsureCleanWorkDirectory)
@@ -104,6 +104,14 @@ public interface IPublishBuildpack : IBuildpackBase
             DotNetRestore(_ => _.SetProjectFile(Solution.Path));
         });
 
+    /// <summary>
+    /// Allows overriding permissions inside buildpack zip entry. This is needed to make any files that buildpacks contribute executable inside container (equivalent of chmod +x <paramref name="fileName"/>)
+    /// </summary>
+    ZipEntryAttributes AddFilePermission(string fileName)
+    {
+        return 0;
+    }
+
     private void MakeLinuxBuildpack(AbsolutePath zipFile)
     {
         var tmpFileName = zipFile + ".tmp";
@@ -132,9 +140,16 @@ public interface IPublishBuildpack : IBuildpackBase
             while ((entry = input.GetNextEntry()) != null)
             {
                 var outEntry = new ZipEntry(entry.Name) { HostSystem = (int)HostSystemID.Unix };
-                var entryAttributes = ZipEntryAttributes.ReadOwner |
-                                      ZipEntryAttributes.ReadOther |
-                                      ZipEntryAttributes.ReadGroup;
+                var permissions =  ZipEntryAttributes.ReadOwner |
+                                   ZipEntryAttributes.ReadOther |
+                                   ZipEntryAttributes.ReadGroup;
+                if (outEntry.Name.EndsWith(".sh"))
+                {
+                    permissions |= ZipEntryAttributes.ExecuteOwner |
+                                   ZipEntryAttributes.ExecuteOther |
+                                   ZipEntryAttributes.ExecuteGroup;
+                }
+                var entryAttributes = permissions | AddFilePermission(outEntry.Name);
                 // if (entry.Name == "bin/buildpack" || entry.Name == "bin/supply")
                 if (Lifecycle.AllValues.Contains(Path.GetFileNameWithoutExtension(entry.Name)))
                 {

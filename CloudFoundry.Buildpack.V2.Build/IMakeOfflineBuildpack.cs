@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using CloudFoundry.Buildpack.V2.Build;
+using CloudFoundry.Buildpack.V2.Manifest;
 using ICSharpCode.SharpZipLib.Zip;
 using Nuke.Common;
 using Nuke.Common.IO;
@@ -125,58 +126,3 @@ public interface IMakeOfflineBuildpack : IBuildpackBase
     }
 }
 
-
-public partial class BuildpackManifest
-{
-    public DefaultVersion[] DefaultVersions { get; set; } = null!;
-
-    public Dependency[] Dependencies { get; set; } = null!;
-
-    public DependencyDeprecationDate[] DependencyDeprecationDates { get; set; } = null!;
-
-    public object[] ExcludeFiles { get; set; } = null!;
-
-    public string[] IncludeFiles { get; set; } = null!;
-
-    public string Language { get; set; } = null!;
-
-    public string PrePackage { get; set; } = null!;
-
-    public string Stack { get; set; } = null!;
-
-    public object[] UrlToDependencyMap { get; set; } = null!;
-}
-
-public partial class DefaultVersion
-{
-    public string Name { get; set; } = null!;
-
-    public string Version { get; set; } = null!;
-}
-
-public partial class Dependency
-{
-    public string Name { get; set; } = null!;
-
-    public string Sha256 { get; set; } = null!;
-
-    public string Source { get; set; } = null!;
-
-    public string SourceSha256 { get; set; } = null!;
-
-    public string Uri { get; set; } = null!;
-
-    public string Version { get; set; } = null!;
-    public string File { get; set; } = null!;
-}
-
-public partial class DependencyDeprecationDate
-{
-    public string Date { get; set; } = null!;
-
-    public string Link { get; set; } = null!;
-
-    public string Name { get; set; } = null!;
-
-    public string VersionLine { get; set; } = null!;
-}

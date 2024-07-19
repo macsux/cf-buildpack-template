@@ -2,7 +2,7 @@
 // See reference: https://minnie.tuhs.org/cgi-bin/utree.pl?file=4.4BSD/usr/include/sys/stat.h
 // (values are in octal - use Convert.ToInt32("OCTALNUM", 8) to get values you see below
 [Flags]
-enum ZipEntryAttributes
+public enum ZipEntryAttributes
 {
     ExecuteOther = 1,
     WriteOther = 2,
