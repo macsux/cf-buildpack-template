@@ -14,7 +14,4 @@
         <PackageReference Include="SharpZipLib" Version="1.4.2" />
         <PackageReference Include="System.Reflection.MetadataLoadContext" Version="8.0.0" />
     </ItemGroup>
-    <ItemGroup>
-      <ProjectReference Include="..\src\CloudFoundry.Buildpack.V2.Common\CloudFoundry.Buildpack.V2.Common.csproj" />
-    </ItemGroup>
 </Project>

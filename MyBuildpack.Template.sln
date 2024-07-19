@@ -142,7 +142,7 @@ Global
 		{76009D87-4ACB-4144-837D-0DDE48FED377}.Supply|Any CPU.Build.0 = Debug|Any CPU
 		
 #endif
-#if (IsHttpModuleBuildpack)					
+#if (IsHttpModuleBuildpack)
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -192,7 +192,7 @@ Global
 #if (IsHttpModuleBuildpack)
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
 #endif
-#if (IsHostedServiceBuildpack)	
+#if (IsHostedServiceBuildpack)
 		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
 #endif
 	EndGlobalSection
