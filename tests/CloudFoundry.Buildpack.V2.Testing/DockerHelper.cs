@@ -18,19 +18,23 @@ public class DockerHelper
         {
             var programFiles = (AbsolutePath)Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             var dockerCli = programFiles / "Docker" / "Docker" / "DockerCli.exe";
-            var processStart = new ProcessStartInfo
+            if (dockerCli.FileExists())
             {
-                FileName = dockerCli,
-                Arguments = arg,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-            var process = Process.Start(processStart);
-            stdOut = process?.StandardOutput.ReadToEnd() ?? "";
-            stdErr = process?.StandardError.ReadToEnd() ?? "";
-            
+                var processStart = new ProcessStartInfo
+                {
+                    FileName = dockerCli,
+                    Arguments = arg,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+
+                var process = Process.Start(processStart);
+                stdOut = process?.StandardOutput.ReadToEnd() ?? "";
+                stdErr = process?.StandardError.ReadToEnd() ?? "";
+            }
         }
         return (stdOut, stdErr);
     } 

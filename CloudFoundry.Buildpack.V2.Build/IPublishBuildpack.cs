@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+using CloudFoundry.Buildpack.V2.Manifest;
 using ICSharpCode.SharpZipLib.Zip;
 using Nuke.Common;
 using Nuke.Common.Execution;
@@ -15,6 +16,8 @@ using Nuke.Common.Tools.NerdbankGitVersioning;
 using Nuke.Common.Utilities.Collections;
 using Octokit;
 using Serilog;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using FileMode = System.IO.FileMode;
@@ -56,7 +59,7 @@ public interface IPublishBuildpack : IBuildpackBase
                 var extension = publishCombination.Runtime.StartsWith("win") ? ".exe" : "";
                 var framework = publishCombination.Framework;
                 var runtime = publishCombination.Runtime;
-                var publishWorkDirectory = WorkDirectory / runtime;
+                var buildpackRoot = WorkDirectory / runtime;
                 var packageZipName = GetPackageZipName(runtime);
                 var buildpackProject = Solution.GetAllProjects(BuildpackProjectName).Single();
                 if (buildpackProject == null)
@@ -66,8 +69,47 @@ public interface IPublishBuildpack : IBuildpackBase
                 //var publishDirectory = (AbsolutePath)outputPath / "publish";
                 var publishDirectory = buildpackProject.Directory / "bin" / Configuration / framework / runtime / "publish";
 
-                var workBinDirectory = publishWorkDirectory / "bin";
-                var workLibDirectory = publishWorkDirectory / "lib";
+                // CopyFile(buildpackProject.Directory / "manifest.yml", buildpackRoot / "manifest.yml");
+                var deserializer = new DeserializerBuilder()
+                    .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                    .IgnoreUnmatchedProperties()
+                    .Build();
+                var serializer = new SerializerBuilder()
+                    .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                    .Build();
+                
+                var manifest = deserializer.Deserialize<BuildpackManifest>(File.ReadAllText(buildpackProject.Directory / "manifest.yml"));
+                var dependencies = manifest.Dependencies;
+                manifest.Stack = publishCombination.Stack == StackType.Windows ? "windows" : "cflinuxfs4";
+                var dependencyCache = ArtifactsDirectory / ".cache";
+                var md5 = MD5.Create();
+                foreach(var dep in dependencies)
+                {
+                    var hash = BitConverter.ToString(md5.ComputeHash(Encoding.ASCII.GetBytes(dep.Uri))).ToLower().Replace("-", "");
+                    var fileName = new Uri(dep.Uri).Segments.Last();
+                    var cachedDependencyDirectory = dependencyCache / hash;
+                    if (!Directory.Exists(cachedDependencyDirectory))
+                    {
+                        Log.Logger.Information("Downloading dependency '{Name}' from {Uri}", dep.Name, dep.Uri);
+                        HttpTasks.HttpDownloadFile(dep.Uri, cachedDependencyDirectory / fileName);
+                    }
+                    CopyDirectoryRecursively(cachedDependencyDirectory, buildpackRoot / "dependencies" / hash);
+                    dep.File = $"dependencies/{hash}/{fileName}";
+                    dep.Sha256 ??= GetFileSha256(buildpackRoot / "dependencies" / hash / fileName);
+                    
+                }
+                var outputManifest = serializer.Serialize(manifest);
+                File.WriteAllText(buildpackRoot / "manifest.yml", outputManifest);
+                
+                // var outputManifest = serializer.Serialize(manifest);
+                // var manifest = deserializer.Deserialize<BuildpackManifest>(File.ReadAllText(buildpackRoot / "manifest.yml"));
+                // foreach (var dependency in manifest.Dependencies)
+                // {
+                //     manifest.Dependencies.
+                // }
+                //
+                var workBinDirectory = buildpackRoot / "bin";
+                var workLibDirectory = buildpackRoot / "lib";
 
                 CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
                 var supplyExecutable = workBinDirectory / $"supply{extension}";
@@ -87,7 +129,7 @@ public interface IPublishBuildpack : IBuildpackBase
 
                 var tempZipFile = TemporaryDirectory / packageZipName;
                 tempZipFile.DeleteFile();
-                ZipFile.CreateFromDirectory(publishWorkDirectory, tempZipFile, CompressionLevel.NoCompression, false);
+                ZipFile.CreateFromDirectory(buildpackRoot, tempZipFile, CompressionLevel.NoCompression, false);
                 if (publishCombination.Runtime.StartsWith("linux"))
                 {
                     MakeLinuxBuildpack(tempZipFile);
@@ -183,5 +225,13 @@ public interface IPublishBuildpack : IBuildpackBase
         zipFile.DeleteFile();
         RenameFile(tmpFileName, zipFile, FileExistsPolicy.Overwrite);
     }
+
+    private static string GetFileSha256(AbsolutePath file)
+    {
+        using var stream = File.OpenRead(@"C:\projects\cf-buildpack-template\artifacts\.cache\e086b4658b85f113226290e1ffb9adc9\nginx-static_1.26.1_linux_x64_cflinuxfs4_02d0203c.tgz");
+        var hex = Convert.ToHexString(SHA256.HashData(stream)).ToLower();
+        return hex;
+    }
+    
 }
 

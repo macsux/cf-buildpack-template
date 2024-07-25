@@ -101,7 +101,7 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 
 	void InstallHostStartups(BuildContext context)
 	{
-		var hostStartupPath = context.BuildpackLibDirectory / ".hostStartup";
+		var hostStartupPath = context.BuildpackRoot.LibDirectory / ".hostStartup";
 		var hostStartupTypes = File.Exists(hostStartupPath) ? File.ReadAllLines(hostStartupPath) : Array.Empty<string>();
 		var fqnRegex = new Regex(@"^(?<TypeName>[^,]+),\s?(?<AssemblyName>.+)\s*$");
 		var hostStartupAssemblies = hostStartupTypes
@@ -113,10 +113,10 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 		
 		EnvironmentalVariables["ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"] = string.Join(";", hostStartupAssemblies);
 
-		var depsFiles = Directory.EnumerateFiles(context.BuildpackLibDirectory, "*.deps.json").Select(x => (AbsolutePath)x).ToList();
+		var depsFiles = Directory.EnumerateFiles(context.BuildpackRoot.LibDirectory, "*.deps.json").Select(x => (AbsolutePath)x).ToList();
 		foreach (var file in depsFiles)
 		{
-			FileSystemTasks.CopyFile(file, context.TargetDependenciesDirectory / file.Name);
+			FileSystemTasks.CopyFile(file, context.MyDependenciesDirectory / file.Name);
 		}
 		EnvironmentalVariables["DOTNET_ADDITIONAL_DEPS"] = string.Join(";", depsFiles.Select(x => (AbsolutePath)"/home/vcap/deps" / context.BuildpackIndex.ToString() / x.Name));
 		
@@ -127,7 +127,7 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 		var webConfigPath = context.BuildDirectory / "Web.config";
 		if (!File.Exists(webConfigPath)) return;
 		using var webConfig = new WebConfig(webConfigPath);
-		var httpModulesFile = context.BuildpackLibDirectory / ".httpModules";
+		var httpModulesFile = context.BuildpackRoot.LibDirectory / ".httpModules";
 		var httpModules = File.Exists(httpModulesFile) ? File.ReadAllLines(httpModulesFile) : Array.Empty<string>();
 		
 		foreach (var httpModule in httpModules)
@@ -138,7 +138,7 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 	}
 	void InstallNugetCache(BuildContext context)
 	{
-		var nugetSourceDir = context.BuildpackLibDirectory / ".nuget";
+		var nugetSourceDir = context.BuildpackRoot.LibDirectory / ".nuget";
 		var nugetTargetDir = context.BuildDirectory / ".nuget";
 		FileSystemTasks.CopyDirectoryRecursively(nugetSourceDir, nugetTargetDir, DirectoryExistsPolicy.Merge, FileExistsPolicy.Skip);
 		var webConfigPath = context.BuildDirectory / "Web.config";

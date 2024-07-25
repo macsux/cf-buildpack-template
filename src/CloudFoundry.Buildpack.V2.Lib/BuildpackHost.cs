@@ -38,7 +38,7 @@ public class BuildpackHost
         //
         // // return 0;
         // var entrypointExecutable = (AbsolutePath)args[0];
-        var hookName = BuildpackContext.EntrypointExecutable.NameWithoutExtension; // try to get hook name from entrypoint executable name (normal execution conditions)
+        var hookName = EnvironmentHelper.EntrypointExecutable.NameWithoutExtension; // try to get hook name from entrypoint executable name (normal execution conditions)
         args = args.Skip(1).ToArray(); // going forward, remove entrypoint as the first arg
         // Console.Error.WriteLine($"HookName: {hookName}");
         var appDirectory = new Argument<string>(
@@ -56,6 +56,8 @@ public class BuildpackHost
         var profiled = new Argument<string>(
             name: "profiled",
             description: "ProfileD location");
+        
+        Environment.SetEnvironmentVariable(EnvironmentHelper.BuildpackRootEnvironmentalVariableName, EnvironmentHelper.EntrypointExecutable.Parent.Parent);
         
         int returnCode = 0;
         Command CreateSupplyCommand(bool rooted)

@@ -4,7 +4,7 @@ public partial class Dependency
 {
     public string Name { get; set; } = null!;
 
-    public string Sha256 { get; set; } = null!;
+    public string? Sha256 { get; set; }
 
     public string Source { get; set; } = null!;
 

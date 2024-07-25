@@ -1,0 +1,21 @@
+﻿#default_versions:
+#  - name: nginx
+#    version: 1.27.x
+dependencies:
+  - name: nginx
+    version: 1.27.0
+    uri: https://buildpacks.cloudfoundry.org/dependencies/nginx-static/nginx-static_1.27.0_linux_x64_cflinuxfs4_17c5ba9b.tgz
+  - name: dotnet-sdk
+    version: 8.0.107
+    uri: https://download.visualstudio.microsoft.com/download/pr/7280c125-4555-41e5-8060-cd69e4e325a4/34e25b09d2c92b71215f8974a4eeded3/dotnet-sdk-8.0.107-linux-x64.tar.gz
+  - name: dotnet-runtime
+    version: 8.0.3
+    composition:
+      - name: dotnet-sdk
+        version: 8.0.107
+        include:
+          - host/**
+          - shared/Microsoft.NETCore.App/{version} #version is substituted with dotnet-runtime version
+          - dotnet
+        exclude:
+          - sdk/{part-version} #part-version is substituted with dotnet-sdk version

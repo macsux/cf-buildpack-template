@@ -1,7 +1,9 @@
-﻿namespace CloudFoundry.Buildpack.V2.MyBuildpack;
+﻿using Semver;
+
+namespace CloudFoundry.Buildpack.V2.MyBuildpack;
 
 #if(IsSupplyBuildpack)
-public partial class MyBuildpackBuildpack : SupplyBuildpack
+public partial class MyBuildpack : SupplyBuildpack
 #elif(IsFinalBuildpack)
 public partial class MyBuildpackBuildpack : FinalBuildpack
 #elif(IsHttpModuleBuildpack || IsHostedServiceBuildpack)
@@ -29,7 +31,6 @@ public partial class MyBuildpackBuildpack : PluginInjectorBuildpack
     protected override void Apply(BuildContext context)
     {
         Console.WriteLine("Hello world");
-        Console.WriteLine(context.SourceDependenciesDirectory);
         File.WriteAllText(context.BuildDirectory / "contrib.txt", "test");
         EnvironmentalVariables["MY_SETTING"] = "value"; // set any environmental variables for the app (staging phase)
 #if(IsFinalBuildpack)

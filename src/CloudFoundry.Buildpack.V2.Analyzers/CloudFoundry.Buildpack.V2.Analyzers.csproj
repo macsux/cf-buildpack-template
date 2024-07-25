@@ -8,6 +8,8 @@
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <NoWarn>NU5128</NoWarn>
+        <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
+
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,9 +18,31 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0"  PrivateAssets="all"/>
-        
+      <PackageReference Include="YamlDotNet" Version="16.0.0" GeneratePathProperty="true" PrivateAssets="all" />
+      <Compile Include="..\..\CloudFoundry.Buildpack.V2.Build\BuildpackManifest.cs">
+        <Link>BuildpackManifest.cs</Link>
+      </Compile>
+      <Compile Include="..\..\CloudFoundry.Buildpack.V2.Build\DefaultVersion.cs">
+        <Link>DefaultVersion.cs</Link>
+      </Compile>
+      <Compile Include="..\..\CloudFoundry.Buildpack.V2.Build\Dependency.cs">
+        <Link>Dependency.cs</Link>
+      </Compile>
+      <Compile Include="..\..\CloudFoundry.Buildpack.V2.Build\DependencyDeprecationDate.cs">
+        <Link>DependencyDeprecationDate.cs</Link>
+      </Compile>
+        <Compile Include="..\CloudFoundry.Buildpack.V2.Common\BuildpackManifest\*.cs"/>
     </ItemGroup>
+<!--    <ItemGroup>-->
+<!--        <EmbeddedResource Include="$(PKGYamlDotNet)\lib\netstandard2.0\YamlDotNet.dll" Visible="false" />-->
+<!--    </ItemGroup>-->
+    <Target Name="GetDependencyTargetPaths">
+        <ItemGroup>
+            <TargetPathWithTargetPlatformMoniker Include="$(PKGYamlDotNet)\lib\netstandard2.0\YamlDotNet.dll" IncludeRuntimeDependency="false" />
+        </ItemGroup>
+    </Target>
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
+
 </Project>

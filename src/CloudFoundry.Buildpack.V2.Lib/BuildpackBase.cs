@@ -2,16 +2,34 @@ using System.Runtime.InteropServices;
 using System.Text;
 using JetBrains.Annotations;
 using NMica.Utils.IO;
+using Semver;
 
 namespace CloudFoundry.Buildpack.V2;
 
 [PublicAPI]
 public abstract class BuildpackBase
 {
+    // protected void Initialize()
+    // {
+    //     void AddDependency(string name, params (string Version, string Uri)[] versions)
+    //     {
+    //         var dependency = new DependencyPackage(name);
+    //         foreach (var (version, uri) in versions)
+    //         {
+    //             dependency.AddVersion(version, uri);
+    //         }
+    //         BuildpackRoot.Instance.Dependencies.Add(name, dependency);
+    //     }
+    //     AddDependency("", ("",""));
+    //     var dependency = new DependencyPackage("", new DependencyPackage(name);
+    //     
+    // }
+    
+    
     /// <summary>
     /// Dictionary of environmental variables to be set at runtime before the app starts
     /// </summary>
-    protected Dictionary<string,string> EnvironmentalVariables { get; } = new();
+    public Dictionary<string,string> EnvironmentalVariables { get; } = new();
     protected bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
     protected abstract string ImplementingClassName { get; }
     protected virtual string? BuildpackVersion { get; }
@@ -28,8 +46,9 @@ public abstract class BuildpackBase
     protected virtual void PrintHeader()
     {
         var versionInfo = BuildpackVersion != null ? $"v.{BuildpackVersion}" : "";
-        Console.WriteLine($"===Applying {ImplementingClassName} {versionInfo}===");        
+        Console.WriteLine($"===Applying {ImplementingClassName} {versionInfo}===");
     }
+
     /// <summary>
     /// Code that will execute during the run stage before the app is started
     /// </summary>
@@ -46,15 +65,6 @@ public abstract class BuildpackBase
 
     internal void DoPreStartup(PreStartupContext context)
     {
-        // var appHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        // if (EnvironmentInfo.IsWin)
-        //     appHome = Path.Combine(appHome, "app");
-        // var preStartupContext = new PreStartupContext()
-        // {
-        //     AppDirectory = (VariablePath)Environment.GetEnvironmentVariable("HOME"),
-        //     DependenciesDirectory = (VariablePath)(Environment.GetEnvironmentVariable("DEPS_DIR") ?? "~/deps"),
-        //     BuildpackIndex = index
-        // };
         PreStartup(context);
         var profiled = context.AppDirectory / ".profile.d";
         InstallStartupEnvVars(profiled, context.BuildpackIndex, true);
@@ -66,7 +76,7 @@ public abstract class BuildpackBase
         Apply(context);
         
         // var buildpackDepsDir = Path.Combine(depsPath, index.ToString());
-        FileSystemTasks.EnsureExistingDirectory(context.TargetDependenciesDirectory);
+        FileSystemTasks.EnsureExistingDirectory(context.MyDependenciesDirectory);
         var profiled = context.BuildDirectory / ".profile.d";
         FileSystemTasks.EnsureExistingDirectory(profiled);
         InstallStartupEnvVars(profiled, context.BuildpackIndex, false);
@@ -74,16 +84,15 @@ public abstract class BuildpackBase
         {
             // copy buildpack to deps dir so we can invoke it as part of startup
 
-            var currentAppPath = (AbsolutePath)Environment.GetCommandLineArgs()[0];
-            var buildpackFolder = ((AbsolutePath)Environment.GetCommandLineArgs()[0]).Parent ?? throw new Exception("Unable to determine buildpack directory");
-            var buildpackFiles = Directory.EnumerateFiles(buildpackFolder)
+            var buildpackBinFolder = BuildpackRoot.Instance.BinDirectory;
+            var buildpackFiles = Directory.EnumerateFiles(buildpackBinFolder)
                 .Select(x => (AbsolutePath)x)
                 // .Cast<AbsolutePath>()
-                .Where(x => !Lifecycle.AllValues.Where(l => l != Lifecycle.PreStartup).Contains(x.NameWithoutExtension)) // copy over the prestart assembly
+                .Where(x => !Lifecycle.AllValues.Where(l => l != Lifecycle.PreStartup).Contains(x.NameWithoutExtension)) // copy over all buildpack bin files, excluding all hooks except prestart
                 .ToList();
             foreach(var file in buildpackFiles)
             {
-                FileSystemTasks.CopyFile(file, context.TargetDependenciesDirectory / file.Name);
+                FileSystemTasks.CopyFile(file, context.MyDependenciesDirectory / file.Name);
             }
 
             var extension = !IsLinux ? ".exe" : string.Empty;
