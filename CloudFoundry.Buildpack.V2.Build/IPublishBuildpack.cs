@@ -83,8 +83,9 @@ public interface IPublishBuildpack : IBuildpackBase
                 manifest.Stack = publishCombination.Stack == StackType.Windows ? "windows" : "cflinuxfs4";
                 var dependencyCache = ArtifactsDirectory / ".cache";
                 var md5 = MD5.Create();
-                foreach(var dep in dependencies)
+                foreach(var dep in dependencies.Where(x => x.Uri != null))
                 {
+                    // var name = dep.Uri ?? $"{dep.Name}-{dep.Version}";
                     var hash = BitConverter.ToString(md5.ComputeHash(Encoding.ASCII.GetBytes(dep.Uri))).ToLower().Replace("-", "");
                     var fileName = new Uri(dep.Uri).Segments.Last();
                     var cachedDependencyDirectory = dependencyCache / hash;
