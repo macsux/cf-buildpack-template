@@ -33,7 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudFoundry.Buildpack.V2.L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudFoundry.Buildpack.V2.Analyzers", "src\CloudFoundry.Buildpack.V2.Analyzers\CloudFoundry.Buildpack.V2.Analyzers.csproj", "{76009D87-4ACB-4144-837D-0DDE48FED377}"
 EndProject
-
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CloudFoundry.Buildpack.V2.Lib.Tests", "tests\CloudFoundry.Buildpack.V2.Lib.Tests\CloudFoundry.Buildpack.V2.Lib.Tests.csproj", "{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".template", ".template", "{956BF12E-279A-4740-BFEB-B8975D9B6CDF}"
 	ProjectSection(SolutionItems) = preProject
 		.template.config\template.json = .template.config\template.json
@@ -89,6 +90,19 @@ Global
 		{E6A9EE08-BE23-4A19-B8CC-5ED4B0522003}.HostedService|Any CPU.Build.0 = HostedService|Any CPU
 #endif
 #if(false)
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.Supply|Any CPU.ActiveCfg = Supply|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.Supply|Any CPU.Build.0 = Supply|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.Final|Any CPU.ActiveCfg = Final|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.Final|Any CPU.Build.0 = Final|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.HttpModule|Any CPU.ActiveCfg = HttpModule|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.HttpModule|Any CPU.Build.0 = HttpModule|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.HostedService|Any CPU.ActiveCfg = HostedService|Any CPU
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B}.HostedService|Any CPU.Build.0 = HostedService|Any CPU
+		
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{410D4D98-5D30-4A41-B507-2E8E4F84D9F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -171,6 +185,7 @@ Global
 		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC}.HostedService|Any CPU.Build.0 = HostedService|Any CPU
 #endif
 #endif
+
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -188,6 +203,7 @@ Global
 		{16790A3E-4915-4B48-8B20-37591CAE1EF5} = {A989B8EF-B8C1-4BA9-BF91-B3B0529E4584}
 		{69192AC5-8F8D-4199-BBB9-29AC5D0DEC5C} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
 		{76009D87-4ACB-4144-837D-0DDE48FED377} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
+		{5B9BF9C6-0DBB-4F16-90ED-A4FDBD372D7B} = {FEBA1EBA-2A0C-4AEA-AB03-441C9A48A996}
 #endif
 #if (IsHttpModuleBuildpack)
 		{78B2B70E-D369-4FCF-AF89-A2E4F78582AB} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
@@ -195,5 +211,6 @@ Global
 #if (IsHostedServiceBuildpack)
 		{F396415E-DBAC-4FC7-8D9C-CFD412AE22FC} = {7BF14C44-4B4C-4973-B7AD-1C2D45242AE2}
 #endif
+		
 	EndGlobalSection
 EndGlobal

@@ -26,8 +26,6 @@
         <ProjectReference Condition="'$(UsePackages)' == 'false'" Include="..\CloudFoundry.Buildpack.V2.Testing\CloudFoundry.Buildpack.V2.Testing.csproj" />
     </ItemGroup>
 
-<!--    <ItemGroup>-->
-<!--        <ProjectReference Include="..\..\src\MyBuildpack\MyBuildpack.csproj" />-->
-<!--    </ItemGroup>-->
+
 
 </Project>

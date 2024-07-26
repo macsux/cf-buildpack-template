@@ -5,9 +5,9 @@ public partial class BuildpackManifest
 {
     public DefaultVersion[] DefaultVersions { get; set; } = null!;
 
-    public Dependency[] Dependencies { get; set; } = null!;
+    public Dependency[]? Dependencies { get; set; }
 
-    public DependencyDeprecationDate[] DependencyDeprecationDates { get; set; } = null!;
+    public DependencyDeprecationDate[]? DependencyDeprecationDates { get; set; }
 
     public object[] ExcludeFiles { get; set; } = null!;
 

@@ -10,7 +10,7 @@ public partial class Dependency
 
     public string SourceSha256 { get; set; } = null!;
 
-    public string Uri { get; set; } = null!;
+    public string? Uri { get; set; }
 
     public string Version { get; set; } = null!;
     public string File { get; set; } = null!;

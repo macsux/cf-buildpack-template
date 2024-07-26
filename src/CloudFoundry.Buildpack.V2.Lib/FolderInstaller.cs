@@ -13,65 +13,43 @@ public abstract class Installer
     {
         Context = context;
     }
-
-    protected void ExtractPackage(AbsolutePath sourceDir)
-    {
-        var files = Directory.EnumerateFiles(sourceDir).ToList();
-        if (files.Count == 1) // archive - need to unpack
-        {
-            var archive = files.First();
-            (string StdOut, string ErrOut) output;
-            if (archive.EndsWith(".tar.gz") || archive.EndsWith(".tar.xz") || archive.EndsWith(".tgz"))
-            {
-                output = ProcessHelper.Execute("/usr/bin/tar", arguments: $"-xf {archive} -C {sourceDir}");
-                Console.WriteLine(output.StdOut);
-                Console.Error.WriteLine(output.ErrOut);
-                FileSystemTasks.DeleteFile(archive);
-            }
-
-
-            if (archive.EndsWith(".zip"))
-            {
-                System.IO.Compression.ZipFile.ExtractToDirectory(archive, sourceDir);
-                FileSystemTasks.DeleteFile(archive);
-            }
-
-        }
-    }
 }
 [PublicAPI]
 public class FolderInstaller(BuildContext context) : Installer(context)
 {
-    public bool LogInstall { get; set; } = true;
     public void Install(DependencyPackage package, SemVersionRange versionRange, VariablePath? targetFolder = null)
     {
         var specificPackage = package.SelectVersion(versionRange) ?? throw new InvalidOperationException($"No packages of {package.Name} have version that satisfy version range {versionRange}");
         Install(specificPackage, targetFolder);
     }
 
-    public VariablePath Install(DependencyVersion package, 
-        VariablePath? targetFolder = null, 
-        Func<RelativePath, bool>? excludePath = null)
+    public VariablePath Install(DependencyVersion package, VariablePath? targetFolder = null, bool logInstall = true)
     {
         
         targetFolder ??= Context.MyDependenciesDirectory / package.Name;
-        if (LogInstall)
+        if (logInstall)
         {
-            Console.WriteLine($"-----> Installing {package.Name} version {package.Version}");
-            Console.WriteLine($"Copy package content {package.Directory} to {targetFolder}");
+            Console.WriteLine($"-----> Installing {package.Name} version {package.Version} into {targetFolder}");
         }
 
-        ExtractPackage(package.Directory.CurrentAbsolutePath);
-
-        bool ExcludeFile(FileInfo info) => ExcludePath((AbsolutePath)info.FullName);
-        bool ExcludeDirectory(DirectoryInfo info) => ExcludePath((AbsolutePath)info.FullName);
-        bool ExcludePath(AbsolutePath directoryFullPath)
+        var allFiles = package.SelectFiles();
+        foreach (var (absolutePath, relativePath) in allFiles)
         {
-            var relativePath = package.Directory.CurrentAbsolutePath.GetRelativePathTo(directoryFullPath);
-            bool shouldExcludeDirectory = excludePath?.Invoke(relativePath) ?? false;
-            return shouldExcludeDirectory;
+            FileSystemTasks.CopyFile(absolutePath, targetFolder / relativePath);
         }
-        FileSystemTasks.CopyDirectoryRecursively(package.Directory.CurrentAbsolutePath, targetFolder.CurrentAbsolutePath, excludeDirectory: ExcludeDirectory, excludeFile: ExcludeFile);
+        // bool ExcludeFile(FileInfo info) => ExcludePath((AbsolutePath)info.FullName);
+        // bool ExcludeDirectory(DirectoryInfo info) => ExcludePath((AbsolutePath)info.FullName);
+        // bool ExcludePath(AbsolutePath directoryFullPath)
+        // {
+        //     var relativePath = package.Directory.CurrentAbsolutePath.GetRelativePathTo(directoryFullPath);
+        //     bool shouldExcludeDirectory = excludePath?.Invoke(relativePath) ?? false;
+        //     return shouldExcludeDirectory;
+        // }
+        
+        
+        // FileSystemTasks.CopyDirectoryRecursively(package.Folder.CurrentAbsolutePath, targetFolder.CurrentAbsolutePath, excludeDirectory: ExcludeDirectory, excludeFile: ExcludeFile);
         return targetFolder;
     }
+    
+    
 }

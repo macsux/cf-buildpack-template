@@ -19,8 +19,8 @@ namespace CloudFoundry.Buildpack.V2;
 //     public DependencyVersionBuilder WithUri(string uri) => throw new NotImplementedException();
 //     public DependencyVersionBuilder ComposedFrom(string dependency, string version, IEnumerable<string>? includePatterns = null, IEnumerable<string>? excludePatterns = null) => throw new NotImplementedException();
 // }
-//
-//
+
+
 
 [PublicAPI]
 public class DependencyPackage
@@ -33,9 +33,9 @@ public class DependencyPackage
         Name = name;
     }
 
-    public DependencyPackage AddVersion(SemVersion version, DependencyVersion supersetPackage)
+    public DependencyPackage AddVersion(SemVersion version, IEnumerable<DependencyVersion> parts)
     {
-        var dependencyVersion = new DependencyVersion(Name, version, supersetPackage);
+        var dependencyVersion = new DependencyVersion(Name, version, parts);
         _versions.Add(dependencyVersion);
         return this;
     }

@@ -70,38 +70,8 @@ public interface IPublishBuildpack : IBuildpackBase
                 var publishDirectory = buildpackProject.Directory / "bin" / Configuration / framework / runtime / "publish";
 
                 // CopyFile(buildpackProject.Directory / "manifest.yml", buildpackRoot / "manifest.yml");
-                var deserializer = new DeserializerBuilder()
-                    .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                    .IgnoreUnmatchedProperties()
-                    .Build();
-                var serializer = new SerializerBuilder()
-                    .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                    .Build();
-                
-                var manifest = deserializer.Deserialize<BuildpackManifest>(File.ReadAllText(buildpackProject.Directory / "manifest.yml"));
-                var dependencies = manifest.Dependencies;
-                manifest.Stack = publishCombination.Stack == StackType.Windows ? "windows" : "cflinuxfs4";
-                var dependencyCache = ArtifactsDirectory / ".cache";
-                var md5 = MD5.Create();
-                foreach(var dep in dependencies.Where(x => x.Uri != null))
-                {
-                    // var name = dep.Uri ?? $"{dep.Name}-{dep.Version}";
-                    var hash = BitConverter.ToString(md5.ComputeHash(Encoding.ASCII.GetBytes(dep.Uri))).ToLower().Replace("-", "");
-                    var fileName = new Uri(dep.Uri).Segments.Last();
-                    var cachedDependencyDirectory = dependencyCache / hash;
-                    if (!Directory.Exists(cachedDependencyDirectory))
-                    {
-                        Log.Logger.Information("Downloading dependency '{Name}' from {Uri}", dep.Name, dep.Uri);
-                        HttpTasks.HttpDownloadFile(dep.Uri, cachedDependencyDirectory / fileName);
-                    }
-                    CopyDirectoryRecursively(cachedDependencyDirectory, buildpackRoot / "dependencies" / hash);
-                    dep.File = $"dependencies/{hash}/{fileName}";
-                    dep.Sha256 ??= GetFileSha256(buildpackRoot / "dependencies" / hash / fileName);
-                    
-                }
-                var outputManifest = serializer.Serialize(manifest);
-                File.WriteAllText(buildpackRoot / "manifest.yml", outputManifest);
-                
+                ProcessManifest(buildpackProject, publishCombination, buildpackRoot);
+
                 // var outputManifest = serializer.Serialize(manifest);
                 // var manifest = deserializer.Deserialize<BuildpackManifest>(File.ReadAllText(buildpackRoot / "manifest.yml"));
                 // foreach (var dependency in manifest.Dependencies)
@@ -146,6 +116,44 @@ public interface IPublishBuildpack : IBuildpackBase
 
             DotNetRestore(_ => _.SetProjectFile(Solution.Path));
         });
+
+    private void ProcessManifest(Project buildpackProject, PublishTarget publishCombination, AbsolutePath buildpackRoot)
+    {
+        var manifestLocation = buildpackProject.Directory / "manifest.yml";
+        if (!manifestLocation.FileExists())
+            return;
+        var deserializer = new DeserializerBuilder()
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
+            .Build();
+        var serializer = new SerializerBuilder()
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
+            .Build();
+                
+        var manifest = deserializer.Deserialize<BuildpackManifest>(File.ReadAllText(manifestLocation));
+        manifest.Dependencies ??= [];
+        manifest.Stack = publishCombination.Stack == StackType.Windows ? "windows" : "cflinuxfs4";
+        var dependencyCache = ArtifactsDirectory / ".cache";
+        var md5 = MD5.Create();
+        foreach(var dep in manifest.Dependencies.Where(x => x.Uri != null))
+        {
+            // var name = dep.Uri ?? $"{dep.Name}-{dep.Version}";
+            var hash = BitConverter.ToString(md5.ComputeHash(Encoding.ASCII.GetBytes(dep.Uri!))).ToLower().Replace("-", "");
+            var fileName = new Uri(dep.Uri!).Segments.Last();
+            var cachedDependencyDirectory = dependencyCache / hash;
+            if (!Directory.Exists(cachedDependencyDirectory))
+            {
+                Log.Logger.Information("Downloading dependency '{Name}' from {Uri}", dep.Name, dep.Uri);
+                HttpTasks.HttpDownloadFile(dep.Uri, cachedDependencyDirectory / fileName);
+            }
+            CopyDirectoryRecursively(cachedDependencyDirectory, buildpackRoot / "dependencies" / hash);
+            dep.File = $"dependencies/{hash}/{fileName}";
+            dep.Sha256 ??= GetFileSha256(buildpackRoot / "dependencies" / hash / fileName);
+                    
+        }
+        var outputManifest = serializer.Serialize(manifest);
+        File.WriteAllText(buildpackRoot / "manifest.yml", outputManifest);
+    }
 
     /// <summary>
     /// Allows overriding permissions inside buildpack zip entry. This is needed to make any files that buildpacks contribute executable inside container (equivalent of chmod +x <paramref name="fileName"/>)

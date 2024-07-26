@@ -93,13 +93,13 @@ public interface IMakeOfflineBuildpack : IBuildpackBase
             {
                 var inputManifestYaml = streamReader.ReadToEnd();
                 var manifest = deserializer.Deserialize<BuildpackManifest>(inputManifestYaml);
-                var dependencies = manifest.Dependencies;
+                manifest.Dependencies ??= [];
                 var dependencyCache = ArtifactsDirectory / ".cache";
-                foreach(var dep in dependencies)
+                foreach(var dep in manifest.Dependencies.Where(x => x.Uri != null))
                 {
             
-                    var hash = BitConverter.ToString(md5.ComputeHash(Encoding.ASCII.GetBytes(dep.Uri))).ToLower().Replace("-", "");
-                    var fileName = new Uri(dep.Uri).Segments.Last();
+                    var hash = BitConverter.ToString(md5.ComputeHash(Encoding.ASCII.GetBytes(dep.Uri!))).ToLower().Replace("-", "");
+                    var fileName = new Uri(dep.Uri!).Segments.Last();
                     if (!Directory.Exists(dependencyCache / hash))
                     {
                         Log.Logger.Information("Downloading dependency '{Name}' from {Uri}", dep.Name, dep.Uri);
@@ -111,7 +111,7 @@ public interface IMakeOfflineBuildpack : IBuildpackBase
                 var outputManifest = serializer.Serialize(manifest);
                 streamWriter.Write(outputManifest);
                 streamWriter.Flush();
-                foreach (var dep in dependencies)
+                foreach (var dep in manifest.Dependencies.Where(x => x.Uri != null))
                 {
                     using var depStream = new FileStream(ArtifactsDirectory / ".cache" / Regex.Replace(dep.File, "^dependencies/", ""), FileMode.Open);
                     outEntry = new ZipEntry(dep.File);

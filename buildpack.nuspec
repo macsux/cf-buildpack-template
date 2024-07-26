@@ -18,7 +18,7 @@
         <file 
             src="**" 
             target="content\" 
-            exclude="MyBuildpack.sln;nuget.config;**\CloudFoundry.*\**;lifecycle\**;.nuke\**;.editorconfig;.template.build\**;.template.artifacts\**;artifacts\**;.tmp\**;.git\**;**\.dotnet\**;publish\**;**\.idea\**;**\.vs\**;**\bin\**;**\obj\**;**\*.user;\nuget\**;*.zip;\src\CloudFoundry.Buildpack.V2.Analyzers\**;\src\CloudFoundry.Buildpack.V2.Lib\**;\tests\CloudFoundry.Buildpack.V2.Testing\**;build\Build.Template.cs;CloudFoundry.Buildpack.V2.Build\**;**\*.DotSettings"
+            exclude="MyBuildpack.sln;nuget.config;**\CloudFoundry.*\**;lifecycle\**;.nuke\**;.editorconfig;.template.build\**;.template.artifacts\**;artifacts\**;.tmp\**;.git\**;**\.dotnet\**;publish\**;**\.idea\**;**\.vs\**;**\bin\**;**\obj\**;**\*.user;\nuget\**;*.zip;\src\CloudFoundry.Buildpack.V2.Analyzers\**;\src\CloudFoundry.Buildpack.V2.Lib\**;\tests\CloudFoundry.Buildpack.V2*\**;build\Build.Template.cs;CloudFoundry.Buildpack.V2.Build\**;**\*.DotSettings"
         />
         <file
                 src=".nuke\parameters.json"

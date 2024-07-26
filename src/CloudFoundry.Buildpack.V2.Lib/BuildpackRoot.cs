@@ -10,7 +10,7 @@ public class BuildpackRoot : VariablePath
     internal const string LibrariesDirectoryName = "lib";
     internal const string BinDirectoryName = "bin";
     internal static BuildpackRoot Instance { get; } = new();
-    protected BuildpackRoot() : base("%BUILDPACK_ROOT%") {}
+    internal BuildpackRoot() : base("%BUILDPACK_ROOT%") {}
     
     /// <summary>
     /// Location where the root of the currently executing buildpack is inside the container
