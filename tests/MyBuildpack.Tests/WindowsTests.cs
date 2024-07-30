@@ -16,18 +16,18 @@ public class WindowsTests(ITestOutputHelper output, WindowsStackFixture fixture)
         var stageContext = _fixture.CreateStagingContext(appDir);
 
         stageContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "win-x64" / "buildpack.zip");
-        // grab a copy of hwc buildpack (lightweight IIS) here https://network.pivotal.io/products/hwc-buildpack/ and download it to dir below
-        stageContext.Buildpacks.Add(RootDirectory / "artifacts" / "hwc_buildpack-cached-windows-v3.1.34+1702922614.zip");
+        stageContext.Buildpacks.Add(RootDirectory / "artifacts" / "hwc-buildpack.zip");
         stageContext.SkipDetect = true;
-        var stageResults = await fixture.Stage(stageContext, _output);
+        var stageResults = await fixture.Stage(stageContext);
+        var droplet = await stageResults.GetDroplet();
         // assert staging results
-        AbsolutePath contribFile = stageResults.ApplicationDirectory / "contrib.txt";
+        AbsolutePath contribFile = droplet.ApplicationDirectory / "contrib.txt";
         contribFile.Should().BeExistingFile();
         File.ReadAllText(contribFile).Should().Be("test");
         
         // launch the droplet
-        var launchContext = fixture.CreateLaunchContext(stageResults.DropletDirectory);
-        var launchResult = await fixture.Launch(launchContext, _output);
+        var launchContext = stageResults.ToLaunchContext();
+        var launchResult = await fixture.Launch(launchContext);
         // assert how app behaves in running state
         var result = await launchResult.HttpClient.GetAsync("contrib.txt");
         var responseContent = await result.Content.ReadAsStringAsync();
@@ -44,23 +44,25 @@ public class WindowsTests(ITestOutputHelper output, WindowsStackFixture fixture)
         var publishDir = appDir / "bin" / "Release" / "net8.0" / "win-x64" / "publish";
         if (!publishDir.Exists())
         {
-            ProcessTasks.StartProcess("dotnet", "publish -r win-x64", 
+            ProcessTasks.StartProcess("dotnet", "publish -r win-x64 --self-contained", 
                 workingDirectory: appDir,
                 logInvocation: true,
-                logOutput: true, logger: (type, s) => _output.WriteLine(s)).WaitForExit();
+                logOutput: true, logger: (type, s) => _output.WriteLine(s))
+                .WaitForExit();
         }
         var stageContext = _fixture.CreateStagingContext(publishDir);
-
+        // stageContext.SkipDetect = true;
         stageContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "win-x64" / "buildpack.zip");
-        var stageResults = await fixture.Stage(stageContext, _output);
+        var stageResults = await fixture.Stage(stageContext);
+        var droplet = await stageResults.GetDroplet();
         // assert staging results
-        AbsolutePath contribFile = stageResults.ApplicationDirectory / "contrib.txt";
+        AbsolutePath contribFile = droplet.ApplicationDirectory / "contrib.txt";
         contribFile.Should().BeExistingFile();
         File.ReadAllText(contribFile).Should().Be("test");
         
         // launch the droplet
-        var launchContext = fixture.CreateLaunchContext(stageResults.DropletDirectory);
-        var launchResult = await fixture.Launch(launchContext, _output);
+        var launchContext = stageResults.ToLaunchContext();
+        var launchResult = await fixture.Launch(launchContext);
         // assert how app behaves in running state
         var result = await launchResult.HttpClient.GetAsync("/");
         var responseContent = await result.Content.ReadAsStringAsync();
@@ -77,13 +79,14 @@ public class WindowsTests(ITestOutputHelper output, WindowsStackFixture fixture)
         var stageContext = _fixture.CreateStagingContext(appDir);
 
         stageContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "win-x64" / "buildpack.zip");
-        stageContext.Buildpacks.Add(RootDirectory / "artifacts" / "hwc_buildpack.zip");
+        stageContext.Buildpacks.Add(RootDirectory / "artifacts" / "hwc-buildpack.zip");
         stageContext.SkipDetect = true;
-        var stageResults = await _fixture.Stage(stageContext, _output);
-        
+        var stageResults = await _fixture.Stage(stageContext);
+
+        var droplet = await stageResults.GetDroplet();
         // launch the droplet
-        var launchContext = _fixture.CreateLaunchContext(stageResults.DropletDirectory);
-        var launchResult = await _fixture.Launch(launchContext, _output);
+        var launchContext = stageResults.ToLaunchContext();
+        var launchResult = await _fixture.Launch(launchContext);
         // assert how app behaves in running state
         var result = await launchResult.HttpClient.GetAsync("DateTime.aspx");
         var responseContent = await result.Content.ReadAsStringAsync();

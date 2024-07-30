@@ -5,7 +5,6 @@ namespace CloudFoundry.Buildpack.V2.Testing;
 [PublicAPI]
 public class StageContext : CloudFoundryContainerContext
 {
-    public AbsolutePath? CacheDirectory { get; set; }
     public AbsolutePath? DropletDirectory { get; set; }
     public List<AbsolutePath> Buildpacks { get; set; } = [];
     /// <summary>

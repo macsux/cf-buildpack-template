@@ -5,9 +5,9 @@ namespace CloudFoundry.Buildpack.V2.MyBuildpack;
 #if(IsSupplyBuildpack)
 public partial class MyBuildpack : SupplyBuildpack
 #elif(IsFinalBuildpack)
-public partial class MyBuildpackBuildpack : FinalBuildpack
+public partial class MyBuildpack : FinalBuildpack
 #elif(IsHttpModuleBuildpack || IsHostedServiceBuildpack)
-public partial class MyBuildpackBuildpack : PluginInjectorBuildpack
+public partial class MyBuildpack : PluginInjectorBuildpack
 #endif
 {
 #if(!IsHttpModuleBuildpack && !IsHostedServiceBuildpack)
@@ -30,7 +30,6 @@ public partial class MyBuildpackBuildpack : PluginInjectorBuildpack
 #endif
     protected override void Apply(BuildContext context)
     {
-        
         Console.WriteLine("Hello world");
         File.WriteAllText(context.BuildDirectory / "contrib.txt", "test");
         EnvironmentalVariables["MY_SETTING"] = "value"; // set any environmental variables for the app (staging phase)

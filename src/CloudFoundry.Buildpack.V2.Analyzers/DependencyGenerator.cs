@@ -57,8 +57,17 @@ public class DependencyGenerator : BuildpackExtensionGenerator
                 dependencyProperties.Add(pascalCaseName);
                 foreach (var versionedDependency in namedDependency)
                 {
+                    versionedDependency.Composition ??= [];
+                    if (versionedDependency.Composition.Count > 0)
+                    {
+                        initBlock.AppendLine($"        {pascalCaseName}.AddVersion(SemVersion.Parse(\"{versionedDependency.Version}\", SemVersionStyles.Any), new DependencyVersion[]{{");
+                    }
+                    else
+                    {
+                        initBlock.AppendLine($"        {pascalCaseName}.AddVersion(SemVersion.Parse(\"{versionedDependency.Version}\", SemVersionStyles.Any), \"{versionedDependency.Uri}\");");
+
+                    }
                     // sourceBuilder.AppendLine($"\tpublic static Dependency {pascalCaseName}_v{versionedDependency.Version.Replace(".", "_")} {{ get; }} = new Dependency(\"{versionedDependency.Name}\", \"{versionedDependency.Version}\");");
-                    initBlock.AppendLine($"        {pascalCaseName}.AddVersion(SemVersion.Parse(\"{versionedDependency.Version}\", SemVersionStyles.Any), \"{versionedDependency.Uri}\");");
                 }
 
                 // var latest = namedDependency.OrderByDescending(x => x.Version).First();

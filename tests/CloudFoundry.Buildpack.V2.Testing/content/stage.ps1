@@ -39,6 +39,7 @@ $builder = "$tmp\lifecycle\builder.exe -buildArtifactsCacheDir $tmp\cache -build
 if($skipDetect.IsPresent){
     $builder = "$builder -skipDetect"
 }
-Invoke-Expression $builder
 Write-Output $builder
-tar -xf $tmp/droplet/droplet.tar -C $tmp/droplet
+Invoke-Expression $builder
+
+# tar -xf $tmp/droplet/droplet.tar -C $tmp/droplet

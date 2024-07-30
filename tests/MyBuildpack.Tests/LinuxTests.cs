@@ -13,15 +13,17 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
     public async Task PushDotnetInjector()
     {
         var appDir = RootDirectory / "tests" / "fixtures" / "dotnetapp";
+        (appDir / "bin").DeleteDirectory();
+        (appDir / "obj").DeleteDirectory();
         var stagingContext = _fixture.CreateStagingContext(appDir);
         stagingContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "linux-x64" / "buildpack.zip");
         stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "dotnet-core-buildpack.zip");
         stagingContext.SkipDetect = true;
-        var stageResult = await _fixture.Stage(stagingContext, _output);
+        var stageResult = await _fixture.Stage(stagingContext);
 
-        var dropletDir = stageResult.DropletDirectory;
-        var context = _fixture.CreateLaunchContext(dropletDir);
-        var launchResult = await _fixture.Launch(context, _output);
+        var droplet = await stageResult.GetDroplet();
+        var context = stageResult.ToLaunchContext();
+        var launchResult = await _fixture.Launch(context);
         var result2 = await launchResult.HttpClient.GetAsync("/");
         result2.IsSuccessStatusCode.Should().BeTrue();
         var result = await launchResult.HttpClient.GetAsync("/hello");
@@ -30,7 +32,6 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
         responseBody.Should().Be("Hello world");
     }
 #else
-
 
     [Fact]
     public async Task PushStaticFile()
@@ -41,15 +42,16 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
         stagingContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "linux-x64" / "buildpack.zip");
         stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "staticfile-buildpack.zip");
         stagingContext.SkipDetect = true;
-        var stageResults = await _fixture.Stage(stagingContext, _output);
+        var stageResults = await _fixture.Stage(stagingContext);
         // assert staging results
-        AbsolutePath contribFile = stageResults.ApplicationDirectory / "public" / "contrib.txt";
+        using var droplet = await stageResults.GetDroplet();
+        AbsolutePath contribFile = droplet.ApplicationDirectory / "public" / "contrib.txt";
         contribFile.Should().BeExistingFile();
         File.ReadAllText(contribFile).Should().Be("test");
         
         // launch the droplet
-        var launchContext = _fixture.CreateLaunchContext(stageResults.DropletDirectory);
-        var launchResult = await _fixture.Launch(launchContext, _output);
+        var launchContext = stageResults.ToLaunchContext();
+        var launchResult = await _fixture.Launch(launchContext);
         // assert how app behaves in running state
         var result = await launchResult.HttpClient.GetAsync("contrib.txt");
         var responseContent = await result.Content.ReadAsStringAsync();
@@ -66,11 +68,10 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
         // use your own buildpack below - dotnet-core-buildpack is provided as an example of working final buildpack for test structure purposes
         // stagingContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "linux-x64" / "buildpack.zip");
         stagingContext.Buildpacks.Add(RootDirectory / "artifacts" / "dotnet-core-buildpack.zip");
-        var stageResult = await _fixture.Stage(stagingContext, _output);
+        var stageResult = await _fixture.Stage(stagingContext);
 
-        var dropletDir = stageResult.DropletDirectory;
-        var context = _fixture.CreateLaunchContext(dropletDir);
-        var launchResult = await _fixture.Launch(context, _output);
+        var context = stageResult.ToLaunchContext();
+        var launchResult = await _fixture.Launch(context);
         var result = await launchResult.HttpClient.GetAsync("/");
         result.IsSuccessStatusCode.Should().BeTrue();
     }

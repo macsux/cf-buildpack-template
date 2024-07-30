@@ -54,7 +54,7 @@ internal class WebConfig : IDisposable
     }
     [UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Assembly load is only used to read assembly name which should be trim safe")]
 
-    public void CreateAssemblyBindings(VariablePath assembliesDir)
+    public void CreateAssemblyBindings(AbsolutePath assembliesDir)
     {
         var libraryFiles = Directory.EnumerateFiles(assembliesDir, "*.dll", SearchOption.AllDirectories).ToList();
 
@@ -64,68 +64,69 @@ internal class WebConfig : IDisposable
         //     .ToList();
 		
         // Console.WriteLine("Applying assembly loading information to web.config for following:");
-        foreach (var file in libraryFiles)
-        {
-            AssemblyName assemblyName;
-            try
+        var assemblyNames = libraryFiles.Select(file =>
             {
-                assemblyName = Assembly.LoadFile(file).GetName();
-            }
-            catch (Exception)
-            {
-                Console.Error.WriteLine($"{file} is not a valid .NET assembly");
-                continue;
-            }
-            // <probing privatePath="bin;bin2\subbin;bin3"/>
-            // var probingElement = GetOrCreateElement(Configuration_Runtime_AssemblyBinding, "probing", MsNamespace);
-            // var currentProbingDirs = new HashSet<string>(probingElement.GetAttribute("privatePath").Split(';').Where(x => !string.IsNullOrEmpty(x)));
-            // if (currentProbingDirs.Count == 0)
-            // {
-                // currentProbingDirs.Add("bin");
-            // }
+                AssemblyName assemblyName = null!;
+                try
+                {
+                    assemblyName = Assembly.LoadFile(file).GetName();
+                }
+                catch (Exception)
+                {
+                    Console.Error.WriteLine($"{file} is not a valid .NET assembly");
+                }
 
-            // foreach (var probingDir in probingDirs)
-            // {
-                // currentProbingDirs.Add(probingDir);
-            // }
-            // probingElement.SetAttribute("privatePath", string.Join(";", currentProbingDirs));
-			
-            // Console.WriteLine($"- {file}");
-            var assemblyPublicKeyToken = string.Join(string.Empty, Array.ConvertAll(assemblyName.GetPublicKeyToken(), x => x.ToString("X2"))).ToLower();
+                return (File: file, AssemblyName: assemblyName);
+            })
+            .Where(x => x.AssemblyName != null)
+            .ToList();
+        
+        foreach (var assembliesByName in assemblyNames.GroupBy(x => x.AssemblyName.Name))
+        {
+            var assemblyIdentity = assembliesByName.First().AssemblyName;
+            var assemblyPublicKeyToken = string.Join(string.Empty, Array.ConvertAll(assemblyIdentity.GetPublicKeyToken(), x => x.ToString("X2"))).ToLower();
             var publicKeyTokenSelector = !string.IsNullOrEmpty(assemblyPublicKeyToken) ? $" and @publicKeyToken='{assemblyPublicKeyToken}'" : string.Empty;
-            var cultureSelector = !string.IsNullOrEmpty(assemblyName.CultureName) ? $" and culture='{assemblyName.CultureName}'" : string.Empty;
-			
-            var dependentAssemblyNode = (XmlElement?)Configuration_Runtime_AssemblyBinding.SelectSingleNode($"ms:dependentAssembly[ms:assemblyIdentity/@name='{assemblyName.Name}'{publicKeyTokenSelector}{cultureSelector}]", _ns);
+            var cultureSelector = !string.IsNullOrEmpty(assemblyIdentity.CultureName) ? $" and culture='{assemblyIdentity.CultureName}'" : string.Empty;
+            var dependentAssemblyNode = (XmlElement?)Configuration_Runtime_AssemblyBinding.SelectSingleNode($"ms:dependentAssembly[ms:assemblyIdentity/@name='{assemblyIdentity.Name}'{publicKeyTokenSelector}{cultureSelector}]", _ns);
             if (dependentAssemblyNode == null)
             {
-                dependentAssemblyNode = GetOrCreateElement(Configuration_Runtime_AssemblyBinding, "dependentAssembly", MsNamespace);
-                var assemblyIdentityNode = GetOrCreateElement(dependentAssemblyNode, "assemblyIdentity", MsNamespace);
+                dependentAssemblyNode = _doc.CreateElement("dependentAssembly", MsNamespace);
+                Configuration_Runtime_AssemblyBinding.AppendChild(dependentAssemblyNode);
+                var assemblyIdentityNode = _doc.CreateElement("assemblyIdentity", MsNamespace);
+                dependentAssemblyNode.AppendChild(assemblyIdentityNode);
                 // var assemblyIdentityNode = _doc.CreateElement("assemblyIdentity", MsNamespace);
                 if (!string.IsNullOrEmpty(assemblyPublicKeyToken))
                 {
-                    assemblyIdentityNode.SetAttribute("publicKeyToken", string.Join(string.Empty, Array.ConvertAll(assemblyName.GetPublicKeyToken(), x => x.ToString("X2"))).ToLower());
+                    assemblyIdentityNode.SetAttribute("publicKeyToken", string.Join(string.Empty, Array.ConvertAll(assemblyIdentity.GetPublicKeyToken(), x => x.ToString("X2"))).ToLower());
                 }
 
-                if (!string.IsNullOrEmpty(assemblyName.CultureName))
+                if (!string.IsNullOrEmpty(assemblyIdentity.CultureName))
                 {
-                    assemblyIdentityNode.SetAttribute("culture", assemblyName.CultureName);
+                    assemblyIdentityNode.SetAttribute("culture", assemblyIdentity.CultureName);
                 }
 
-                assemblyIdentityNode.SetAttribute("name", assemblyName.Name);
+                assemblyIdentityNode.SetAttribute("name", assemblyIdentity.Name);
                 // dependentAssemblyNode.AppendChild(assemblyIdentityNode);
 
             }
 
-            var codeBaseNode = (XmlElement?)dependentAssemblyNode.SelectSingleNode($"ms:codeBase[@version='{assemblyName.Version}']", _ns);
-            if (codeBaseNode == null)
+            foreach (var assemblyVersion in assembliesByName)
             {
-                codeBaseNode = _doc.CreateElement("codeBase", MsNamespace);
-                codeBaseNode.SetAttribute("version", assemblyName.Version.ToString());
-                codeBaseNode.SetAttribute("href", PathConstruction.GetRelativePath(_appDir, file));
-                dependentAssemblyNode.AppendChild(codeBaseNode);
+
+                
+                var codeBaseNode = (XmlElement?)dependentAssemblyNode.SelectSingleNode($"ms:codeBase[@version='{assemblyVersion.AssemblyName.Version}']", _ns);
+                if (codeBaseNode == null)
+                {
+                    codeBaseNode = _doc.CreateElement("codeBase", MsNamespace);
+                    codeBaseNode.SetAttribute("version", assemblyVersion.AssemblyName.Version.ToString());
+                    codeBaseNode.SetAttribute("href", PathConstruction.GetRelativePath(_appDir, assemblyVersion.File));
+                    dependentAssemblyNode.AppendChild(codeBaseNode);
+                }
             }
         }
     }
+
+    public void SaveAs(string path) => _doc.Save(path);
 
     public void Dispose()
     {

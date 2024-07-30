@@ -2,6 +2,7 @@ $homeDir = "c:\users\vcap"
 $tmp = "$homeDir\appdata\local\temp" 
 #$tmp = "C:\projects\cf-buildpack-template\tests\MyBuildpack.Tests\bin\Debug\net8.0\RunBuilderLinux-8dc2d796adf074c\droplet" 
 #$homeDir = "C:\projects\cf-buildpack-template\tests\MyBuildpack.Tests\bin\Debug\net8.0\RunBuilderLinux-8dc2d796adf074c\droplet"
+tar -xf $tmp/droplet/droplet.tar -C $homeDir
 
 function SourceEnvVarsFromBat {
     param(
@@ -32,7 +33,7 @@ if (Test-Path "$homeDir/app/.profile.d"){
         . $profileScript
     }
 }
-$stagingInfo = $(Get-Content $tmp/staging_info.yml -Raw | ConvertFrom-Json)
+$stagingInfo = $(Get-Content $homeDir/staging_info.yml -Raw | ConvertFrom-Json)
 $startCommand="$homedir\app\" + $stagingInfo.start_command
 #Write-Output $startCommand
 cd c:\users\vcap\app

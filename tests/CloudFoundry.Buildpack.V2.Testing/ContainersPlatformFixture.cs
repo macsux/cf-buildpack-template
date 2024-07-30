@@ -1,9 +1,11 @@
-﻿using System.Net;
+﻿using System.Diagnostics;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Images;
+using DotNet.Testcontainers.Volumes;
 using Newtonsoft.Json;
 using Nuke.Common.Tooling;
 using static DotNet.Testcontainers.Configurations.UnixFileModes;
@@ -19,7 +21,12 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
     internal static UnixFileModes ReadAndExecutePermissions = ReadPermissions | UserExecute | GroupExecute | OtherExecute;
     internal static UnixFileModes ReadWriteAndExecutePermissions = ReadAndExecutePermissions | UserWrite | GroupWrite | OtherWrite;
 
-    public Stream? OutputStream { get; set; }
+    // static AsyncLocal<Stream?> _outputStreamContext = new();
+    // public static Stream? OutputStream
+    // {
+    //     get => _outputStreamContext.Value;
+    //     set => _outputStreamContext.Value = value;
+    // }
     
     internal ContainersPlatformFixture(IMessageSink messageSink)
     {
@@ -35,12 +42,11 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
     protected abstract Dictionary<string, string> GetContainerEnvironmentalVariables(CloudFoundryContainerContext context);
 
 
-    public StageContext CreateStagingContext(AbsolutePath applicationDirectory, [CallerMemberName] string callingMethod = "test")
+    public StageContext CreateStagingContext(AbsolutePath applicationDirectory)
     {
-        var baseDir = (AbsolutePath)Directory.GetCurrentDirectory() / $"{callingMethod}-{DateTime.Now.Ticks:x}";
+        var baseDir = TestContext.GetTestCaseDirectory();
         var context = new StageContext
         {
-            CacheDirectory = baseDir / "cache",
             ApplicationDirectory = applicationDirectory,
             DropletDirectory = baseDir / "droplet",
             Stack = Stack
@@ -49,12 +55,12 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         return context;
     }
     
-    public LaunchContext CreateLaunchContext(AbsolutePath dropletDirectory) => new(dropletDirectory, Stack);
+    // public LaunchContext CreateLaunchContext(StageResults stageContext) => new(stageContext.ToLaunchContext(), Stack);
     public abstract Task InitializeAsync();
     public abstract Task DisposeAsync();
     
-    protected abstract AbsolutePath RemoteHome { get; }
-    protected abstract AbsolutePath RemoteTemp { get; }
+    internal abstract AbsolutePath RemoteHome { get; }
+    internal  abstract AbsolutePath RemoteTemp { get; }
     protected List<string> LaunchCommand { get; init; } = new();
     protected List<string> StageCommand { get; init; } = new();
     protected abstract IWaitForContainerOS WaitStrategy { get; }
@@ -72,16 +78,16 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
             builder = builder.WithEnvironment(key, value);
         }
 
-        if (OutputStream == null)
-        {
-            throw new InvalidOperationException(
-                "OutputStream is not set. Inject `ITestOutputHelper output` into your test class and add 'fixture.OutputStream = new TestOutputStream(output);' to your constructor");
-        }
+        // if (OutputStream == null)
+        // {
+        //     throw new InvalidOperationException(
+        //         "OutputStream is not set. Inject `ITestOutputHelper output` into your test class and add 'fixture.OutputStream = new TestOutputStream(output);' to your constructor");
+        // }
         return builder
             .WithImage(ContainerImage)
             .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
             .WithEnvironment("CF_STACK", Stack.ToString().ToLowerInvariant())
-            .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(OutputStream,OutputStream));
+            .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(TestContext.TestOutputStream,TestContext.TestOutputStream));
     }
     bool IsFree(int port)
     {
@@ -100,8 +106,10 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         }
         return port;
     }
-    public virtual async Task<LaunchResult> Launch(LaunchContext context, ITestOutputHelper? output = null, CancellationToken cancellationToken = default)
+    public virtual async Task<LaunchResult> Launch(LaunchContext context, CancellationToken cancellationToken = default)
     {
+        TestContext.TestOutputHelper?.WriteLine("Launching app....");
+        var stopwatch = Stopwatch.StartNew();
         if (cancellationToken == CancellationToken.None)
         {
             cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(120)).Token;
@@ -113,11 +121,12 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         var waitStrategy = WaitStrategy.UntilPortIsAvailable(8080);
         containerBuilder = containerBuilder
                 .WithCommand(LaunchCommand.ToArray())
-                .WithResourceMapping(new FileInfo(context.DropletDirectory / "staging_info.yml"), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions)
-                .WithResourceMapping(new DirectoryInfo(context.ProfileDDirectory), (RemoteHome / ".profile.d").AsLinuxPath())
-                .WithBindMount(context.ApplicationDirectory, RemoteHome / "app")
-                .WithBindMount(context.DependenciesDirectory,  RemoteHome / "deps")
-                .WithBindMount(context.TemporaryDirectory,  RemoteHome / "tmp")
+                .WithVolumeMount(context.DropletVolume, RemoteTemp / "droplet")
+                // .WithResourceMapping(new FileInfo(context.DropletDirectory / "staging_info.yml"), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions)
+                // .WithResourceMapping(new DirectoryInfo(context.ProfileDDirectory), (RemoteHome / ".profile.d").AsLinuxPath())
+                // .WithBindMount(context.ApplicationDirectory, RemoteHome / "app")
+                // .WithBindMount(context.DependenciesDirectory,  RemoteHome / "deps")
+                // .WithBindMount(context.TemporaryDirectory,  RemoteHome / "tmp")
                 .WithEnvironment("DEPS_DIR", (RemoteHome / "deps").AsLinuxPath())
                 .WithEnvironment("HOME", RemoteHome / "app")
                 .WithWaitStrategy(waitStrategy)
@@ -129,6 +138,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         try
         {
             await container.StartAsync(cancellationToken).ConfigureAwait(false);
+            TestContext.TestOutputHelper?.WriteLine($"App started after {stopwatch.Elapsed:hh\\:mm\\:ss}");
         }
         finally
         {
@@ -136,18 +146,27 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
             {
                 var logs = await container.GetLogsAsync(ct: cancellationToken);
                 result.Logs = logs;
-                output?.WriteLine(logs.ToString());
+                TestContext.TestOutputHelper?.WriteLine(logs.ToString());
             }
             catch (Exception ex)
             {
-                output?.WriteLine(ex.ToString());
+                TestContext.TestOutputHelper?.WriteLine(ex.ToString());
             }
         }
         return result;
     }
-    
-    public virtual async Task<StageResults> Stage(StageContext context, ITestOutputHelper? output = null, CancellationToken cancellationToken = default)
+
+    protected virtual Task<IVolume> CreateDropletVolume(CancellationToken cancellationToken = default)
     {
+        var dropletVolume = new VolumeBuilder()
+            // .WithCleanUp(false)
+            .Build();
+        return Task.FromResult(dropletVolume);
+    }
+    public virtual async Task<StageResults> Stage(StageContext context, CancellationToken cancellationToken = default)
+    {
+        TestContext.TestOutputHelper?.WriteLine("Staging app....");
+        var stopwatch = Stopwatch.StartNew();
         if (cancellationToken == CancellationToken.None)
         {
             cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(120)).Token;
@@ -161,20 +180,31 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         if (context.DropletDirectory == null)
             throw new InvalidOperationException("Value of context.DropletDirectory must not be null");
 
-        context.CacheDirectory.CreateDirectory();
         context.DropletDirectory.CreateDirectory();
+        // if (!OperatingSystem.IsWindows())
+        // {
+        //     ProcessTasks.StartProcess("chmod", $"777 {context.DropletDirectory}");
+        // }
         var stageCommand = new List<string>(StageCommand);
         stageCommand.AddRange(context.Buildpacks.Select(x => x.NameWithoutExtension));
         if (context.SkipDetect)
         {
             stageCommand.Add("-skipDetect");
         }
+
+        var dropletVolume = await CreateDropletVolume(cancellationToken);
+
+
+        
         containerBuilder = containerBuilder
                 .WithCommand(stageCommand.ToArray())
-                .WithResourceMapping(new DirectoryInfo(context.CacheDirectory), (RemoteTemp / "cache").AsLinuxPath())
+                // .WithVolumeMount(dropletVolume, (RemoteTemp / "droplet").AsLinuxPath(), AccessMode.ReadWrite)
+                .WithVolumeMount(dropletVolume, RemoteTemp / "droplet", AccessMode.ReadWrite)
+                // .WithResourceMapping(new DirectoryInfo(context.CacheDirectory), (RemoteTemp / "cache").AsLinuxPath())
                 .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
-                .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
+                // .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
             ;
+        
         foreach (var buildpackZip in context.Buildpacks)
         {
             containerBuilder = containerBuilder.WithResourceMapping(new FileInfo(buildpackZip), (RemoteTemp / "buildpackdownloads").AsLinuxPath());
@@ -186,6 +216,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         {
             await container.StartAsync(ct: cancellationToken).ConfigureAwait(false);
             await container.GetExitCodeAsync(ct: cancellationToken);
+            await container.DisposeAsync();
         }
         finally
         {
@@ -199,14 +230,17 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
             }
             
         }
-        output?.WriteLine($"Droplet Dir: {context.DropletDirectory}");
-        var result = new StageResults(context.DropletDirectory, logs)
+        // output?.WriteLine($"Droplet Dir: {context.DropletDirectory}");
+        var result = new StageResults(this, dropletVolume, context.DropletDirectory, logs)
         {
             Buildpacks = context.Buildpacks.Select(x => x.NameWithoutExtension).ToList(),
         };
+        TestContext.TestOutputHelper?.WriteLine($"Finished staging in {stopwatch.Elapsed:hh\\:mm\\:ss}. Droplet stored on volume {dropletVolume.Name}");
         return result;
         
     }
+
+    internal abstract Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, CancellationToken cancellationToken = default);
 
     public async Task<LaunchResult> Push(StageContext context, ITestOutputHelper output)
     {

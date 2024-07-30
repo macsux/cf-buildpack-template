@@ -84,18 +84,25 @@ public interface IPublishBuildpack : IBuildpackBase
 
                 CopyDirectoryRecursively(publishDirectory, workBinDirectory, DirectoryExistsPolicy.Merge);
                 var supplyExecutable = workBinDirectory / $"supply{extension}";
+                var supplyConfig = workBinDirectory / $"supply{extension}.config"; 
                 RenameFile(workBinDirectory / $"buildpack{extension}", supplyExecutable);
-
+                
                 if (publishCombination.Runtime.StartsWith("win"))
                 {
+                    RenameFile(workBinDirectory / $"buildpack{extension}.config", supplyConfig);
                     if (Configuration == BuildConfiguration.Final)
                     {
+                        
                         CopyFile(supplyExecutable, workBinDirectory / $"detect{extension}");
+                        CopyFile(supplyConfig, workBinDirectory / $"detect{extension}.config");
                         CopyFile(supplyExecutable, workBinDirectory / $"finalize{extension}");
+                        CopyFile(supplyConfig, workBinDirectory / $"finalize{extension}.config");
                         CopyFile(supplyExecutable, workBinDirectory / $"release{extension}");
+                        CopyFile(supplyConfig, workBinDirectory / $"release{extension}.config");
                     }
 
                     CopyFile(supplyExecutable, workBinDirectory / $"prestartup{extension}");
+                    CopyFile(supplyConfig, workBinDirectory / $"prestartup{extension}.config");
                 }
 
                 var tempZipFile = TemporaryDirectory / packageZipName;
@@ -130,7 +137,7 @@ public interface IPublishBuildpack : IBuildpackBase
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
                 
-        var manifest = deserializer.Deserialize<BuildpackManifest>(File.ReadAllText(manifestLocation));
+        var manifest = deserializer.Deserialize<BuildpackManifest?>(File.ReadAllText(manifestLocation)) ?? new();
         manifest.Dependencies ??= [];
         manifest.Stack = publishCombination.Stack == StackType.Windows ? "windows" : "cflinuxfs4";
         var dependencyCache = ArtifactsDirectory / ".cache";
@@ -152,6 +159,7 @@ public interface IPublishBuildpack : IBuildpackBase
                     
         }
         var outputManifest = serializer.Serialize(manifest);
+        Directory.CreateDirectory(buildpackRoot);
         File.WriteAllText(buildpackRoot / "manifest.yml", outputManifest);
     }
 

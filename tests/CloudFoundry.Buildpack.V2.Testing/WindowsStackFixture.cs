@@ -2,6 +2,7 @@
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
+using DotNet.Testcontainers.Volumes;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 
@@ -17,7 +18,22 @@ public class WindowsStackFixture : ContainersPlatformFixture
     }
 
     public override CloudFoundryStack Stack => CloudFoundryStack.Windows;
+    internal override async Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, CancellationToken cancellationToken = default)
+    {
+        var remoteDropletTar = RemoteTemp / "droplet" / "droplet.tar";
+        var container = new ContainerBuilder()
+            .WithImage(KnownImages.Windows2016fs)
+            .WithVolumeMount(dropletVolume, RemoteTemp / "droplet")
+            .WithBindMount(localPath,  (RemoteHome / "droplet").AsWindowsPath())
+            .WithCommand("powershell", "-Command", $"tar -xf {remoteDropletTar} -C {(RemoteHome / "droplet").AsWindowsPath()}")
+            .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(TestContext.TestOutputStream,TestContext.TestOutputStream))
+            .Build();
 
+        await container.StartAsync(cancellationToken);
+        await container.GetExitCodeAsync(cancellationToken);
+        await container.DisposeAsync();
+        return new Droplet(localPath);
+    }
     protected override Dictionary<string, string> GetContainerEnvironmentalVariables(CloudFoundryContainerContext context)
     {
         var envVars = new Dictionary<string, string>(context.EnvironmentalVariables);
@@ -80,7 +96,7 @@ public class WindowsStackFixture : ContainersPlatformFixture
 
     public override async Task InitializeAsync()
     {
-        
+        // TestcontainersSettings.Logger = TestContext.GetLogger("Testcontainers");
         DockerHelper.SwitchContainersPlatform(ContainerPlatform.Windows);
         var dockerContextDirectory = DirectoryHelper.CurrentAssemblyFolder / "_empty";
         var dockerfile = "test-windows2019rootfs.Dockerfile";
@@ -103,10 +119,14 @@ public class WindowsStackFixture : ContainersPlatformFixture
         {
             await container.DisposeAsync();
         }
+        foreach (var volume in _volumes)
+        {
+            await volume.DisposeAsync();
+        }
     }
 
-    protected override AbsolutePath RemoteHome => (AbsolutePath)@"c:\Users\vcap";
-    protected override AbsolutePath RemoteTemp => RemoteHome / "appdata" / "local" / "temp";
+    internal override AbsolutePath RemoteHome => (AbsolutePath)@"c:\Users\vcap";
+    internal  override AbsolutePath RemoteTemp => RemoteHome / "appdata" / "local" / "temp";
     protected override IWaitForContainerOS WaitStrategy => Wait.ForWindowsContainer();
     protected override string ContainerImage => KnownImages.Windows2016fsTest;
 
@@ -117,10 +137,18 @@ public class WindowsStackFixture : ContainersPlatformFixture
         .WithResourceMapping(new FileInfo(DirectoryHelper.CurrentAssemblyFolder / LaunchScriptName), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions);
     
     List<IContainer> _containers = new();
-    public override async Task<LaunchResult> Launch(LaunchContext context, ITestOutputHelper? output = null, CancellationToken cancellationToken = default)
+    List<IVolume> _volumes = new();
+    public override async Task<LaunchResult> Launch(LaunchContext context, CancellationToken cancellationToken = default)
     {
-        var result = await base.Launch(context, output, cancellationToken);
+        var result = await base.Launch(context, cancellationToken);
         _containers.Add(result.Container);
         return result;
+    }
+
+    public override async Task<StageResults> Stage(StageContext context, CancellationToken cancellationToken = default)
+    {
+        var stageResult = await base.Stage(context, cancellationToken);
+        _volumes.Add(stageResult.DropletVolume);
+        return stageResult;
     }
 }

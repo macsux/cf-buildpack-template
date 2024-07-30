@@ -27,17 +27,24 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Only strings are used with JsonArray.Add method")]
 	public override void PreStartup(PreStartupContext context)
 	{
+		Console.WriteLine($"Running {GetType().Name} prestart hook...");
 		    //Console.WriteLine(new StackTrace().ToString());
-	    Console.WriteLine("Adjusting runtimeconfig.json to probe nuget folder when resolving dependencies");
 	    // if it was compiled from source, the app ends up in final buildpacks deps dir under dotnet_publish subfolder. in all other cases it's in it's regular spot: /home/vcap/app
-	    AbsolutePath publishDir = (AbsolutePath)"/home/vcap/app"; 
-	    if(Directory.Exists("/home/vcap/deps"))
-	        publishDir = (AbsolutePath)Directory.EnumerateDirectories("/home/vcap/deps").OrderBy(x => x).Last() / "dotnet_publish";
+	    var homeDir = (AbsolutePath)Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+	    if (IsLinux)
+		    homeDir = homeDir.Parent; // CF sets HOME to ~/app dir, so we need to adjust. On windows, UserProfile resolves differently then just reading %HOME%
+	    AbsolutePath publishDir = homeDir / "app"; 
+	    if(Directory.Exists(homeDir / "deps"))
+	        publishDir = (AbsolutePath)Directory.EnumerateDirectories(homeDir / "deps").OrderBy(x => x).Last() / "dotnet_publish";
 	    if (!Directory.Exists(publishDir))
-	        publishDir = (AbsolutePath)"/home/vcap/app";
+	        publishDir = homeDir / "app";
+	    
+	    Console.WriteLine($"Using app folder {publishDir}");
 
 	    foreach (var runtimeConfigFile in Directory.EnumerateFiles(publishDir, "*.runtimeconfig.json"))
 	    {
+		    Console.WriteLine($"Adjusting {runtimeConfigFile} to probe nuget folder when resolving dependencies");
+
 	        // add path to nuget folder as part of "additionalProbingPaths" in runtimeconfig.json so extra assemblies we introduce from plugins can be resolved from there
 	        var runtimeConfig = JsonNode.Parse(File.ReadAllText(runtimeConfigFile))!;
 	        var runtimeOptions = runtimeConfig["runtimeOptions"]!;
@@ -48,10 +55,10 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 	            runtimeOptions["additionalProbingPaths"] = probingPaths;
 	        }
 	        
-	        var nugetPackageDir = "/home/vcap/app/.nuget/packages";
+	        var nugetPackageDir = homeDir / "app/.nuget/packages";
 	        if (!probingPaths.Select(x => x!.ToString()).Any(x => x == nugetPackageDir))
 	        {
-	            probingPaths.Add(JsonValue.Create(nugetPackageDir));
+	            probingPaths.Add(JsonValue.Create(nugetPackageDir.ToString()));
 	        }
 	        File.WriteAllText(runtimeConfigFile, runtimeConfig.ToString());
 	    }
@@ -101,7 +108,8 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 
 	void InstallHostStartups(BuildContext context)
 	{
-		var hostStartupPath = context.BuildpackRoot.LibDirectory / ".hostStartup";
+		var homeDir = (AbsolutePath)Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+		var hostStartupPath = context.BuildpackRoot.LibDirectory.CurrentAbsolutePath / ".hostStartup";
 		var hostStartupTypes = File.Exists(hostStartupPath) ? File.ReadAllLines(hostStartupPath) : Array.Empty<string>();
 		var fqnRegex = new Regex(@"^(?<TypeName>[^,]+),\s?(?<AssemblyName>.+)\s*$");
 		var hostStartupAssemblies = hostStartupTypes
@@ -110,24 +118,27 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 			.Select(x => x.Groups["AssemblyName"])
 			.Distinct()
 			.ToList();
+
+		if (hostStartupAssemblies.Count == 0)
+			return;
 		
 		EnvironmentalVariables["ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"] = string.Join(";", hostStartupAssemblies);
 
-		var depsFiles = Directory.EnumerateFiles(context.BuildpackRoot.LibDirectory, "*.deps.json").Select(x => (AbsolutePath)x).ToList();
+		var depsFiles = Directory.EnumerateFiles(context.BuildpackRoot.LibDirectory.CurrentAbsolutePath, "*.deps.json").Select(x => (AbsolutePath)x).ToList();
 		foreach (var file in depsFiles)
 		{
-			FileSystemTasks.CopyFile(file, context.MyDependenciesDirectory / file.Name);
+			FileSystemTasks.CopyFile(file, context.MyDependenciesDirectory.CurrentAbsolutePath / file.Name);
 		}
-		EnvironmentalVariables["DOTNET_ADDITIONAL_DEPS"] = string.Join(";", depsFiles.Select(x => (AbsolutePath)"/home/vcap/deps" / context.BuildpackIndex.ToString() / x.Name));
+		EnvironmentalVariables["DOTNET_ADDITIONAL_DEPS"] = string.Join(";", depsFiles.Select(x => homeDir / "deps" / context.BuildpackIndex.ToString() / x.Name));
 		
 
 	}
 	void InstallHttpModules(BuildContext context)
 	{
-		var webConfigPath = context.BuildDirectory / "Web.config";
+		var webConfigPath = context.BuildDirectory.CurrentAbsolutePath / "Web.config";
 		if (!File.Exists(webConfigPath)) return;
 		using var webConfig = new WebConfig(webConfigPath);
-		var httpModulesFile = context.BuildpackRoot.LibDirectory / ".httpModules";
+		var httpModulesFile = context.BuildpackRoot.LibDirectory.CurrentAbsolutePath / ".httpModules";
 		var httpModules = File.Exists(httpModulesFile) ? File.ReadAllLines(httpModulesFile) : Array.Empty<string>();
 		
 		foreach (var httpModule in httpModules)
@@ -139,9 +150,9 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 	void InstallNugetCache(BuildContext context)
 	{
 		var nugetSourceDir = context.BuildpackRoot.LibDirectory / ".nuget";
-		var nugetTargetDir = context.BuildDirectory / ".nuget";
-		FileSystemTasks.CopyDirectoryRecursively(nugetSourceDir, nugetTargetDir, DirectoryExistsPolicy.Merge, FileExistsPolicy.Skip);
-		var webConfigPath = context.BuildDirectory / "Web.config";
+		var nugetTargetDir = context.BuildDirectory.CurrentAbsolutePath / ".nuget";
+		FileSystemTasks.CopyDirectoryRecursively(nugetSourceDir.CurrentAbsolutePath, nugetTargetDir, DirectoryExistsPolicy.Merge, FileExistsPolicy.Skip);
+		var webConfigPath = context.BuildDirectory.CurrentAbsolutePath / "Web.config";
 		if (!File.Exists(webConfigPath)) return;
 		using var webConfig = new WebConfig(webConfigPath);
 		webConfig.CreateAssemblyBindings(nugetTargetDir);

@@ -1,5 +1,4 @@
-﻿
-using CloudFoundry.Buildpack.V2.Build;
+﻿using CloudFoundry.Buildpack.V2.Build;
 using Nuke.Common;
 using Nuke.Common.IO;
 using Nuke.Common.Tools.Git;

@@ -1,21 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFrameworks>net8.0;net48</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
 
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <DebugSymbols>true</DebugSymbols>
+        <EmbedAllSources>true</EmbedAllSources>
+        <DebugType>portable</DebugType>
+        
     </PropertyGroup>
-
+    <PropertyGroup>
+        <CurrentPropsFileDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</CurrentPropsFileDir>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="$(CurrentPropsFileDir)..\CloudFoundry.Buildpack.V2.Testing\TestOutputStream.cs" />
+        <Compile Include="$(CurrentPropsFileDir)..\CloudFoundry.Buildpack.V2.Testing\TestContext.cs" />
+    </ItemGroup>
     <ItemGroup>
         <PackageReference Include="coverlet.collector" Version="6.0.0"/>
         <PackageReference Include="FluentAssertions" Version="6.12.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
 <!--        <PackageReference Include="Nuke.Common" Version="8.0.0" />-->
         <PackageReference Include="xunit" Version="2.5.3"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3"/>
+        <PackageReference Include="Neovolve.Logging.Xunit" Version="6.0.0" />
+
+    </ItemGroup>
+    <ItemGroup>
+        <Using Include="Xunit.Abstractions"/>
+        <Using Include="NMica.Utils.IO"/>
     </ItemGroup>
 
     <ItemGroup>

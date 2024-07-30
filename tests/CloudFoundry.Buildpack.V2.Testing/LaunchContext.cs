@@ -1,19 +1,22 @@
-﻿namespace CloudFoundry.Buildpack.V2.Testing;
+﻿using DotNet.Testcontainers.Volumes;
+
+namespace CloudFoundry.Buildpack.V2.Testing;
 
 [PublicAPI]
 public class LaunchContext : CloudFoundryContainerContext
 {
+    public IVolume DropletVolume { get; }
     public AbsolutePath? DropletDirectory { get; }
     public override AbsolutePath ApplicationDirectory => DropletDirectory / "app";
     public AbsolutePath DependenciesDirectory => DropletDirectory / "deps";
     public AbsolutePath ProfileDDirectory => DropletDirectory / "profile.d";
     public AbsolutePath TemporaryDirectory => DropletDirectory / "tmp";
 
-    internal LaunchContext(AbsolutePath dropletDirectory, CloudFoundryStack stack)
+    internal LaunchContext(IVolume dropletVolume, CloudFoundryStack stack)
     {
-        DropletDirectory = dropletDirectory;
+        DropletVolume = dropletVolume;
         Stack = stack;
     }
 
-    public static LaunchContext FromDropletDirectory(AbsolutePath dropletDirectory, CloudFoundryStack stack) => new (dropletDirectory, stack);
+    // public static LaunchContext FromDropletDirectory(AbsolutePath dropletDirectory, CloudFoundryStack stack) => new (dropletDirectory, stack);
 }

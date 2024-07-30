@@ -1,6 +1,7 @@
 ﻿using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Images;
+using DotNet.Testcontainers.Volumes;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 
@@ -28,7 +29,20 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
         LaunchCommand =  [ RemoteTemp / LaunchScriptName ];
         StageCommand =  [ RemoteTemp / StageScriptName ];
     }
+    internal override async Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, CancellationToken cancellationToken = default)
+    {
+        var container = new ContainerBuilder()
+            .WithImage(KnownImages.Cflinuxfs4)
+            .WithVolumeMount(dropletVolume, RemoteTemp / "droplet")
+            .WithBindMount(localPath,  "/droplet")
+            .WithCommand("sh", "-c", "tar -xf /tmp/droplet/droplet.tar -C /droplet && chown -R root:root /droplet")
+            .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(TestContext.TestOutputStream,TestContext.TestOutputStream))
+            .Build();
 
+        await container.StartAsync(cancellationToken);
+        await container.GetExitCodeAsync(cancellationToken);
+        return new Droplet(localPath);
+    }
     protected override Dictionary<string, string> GetContainerEnvironmentalVariables(CloudFoundryContainerContext context)
     {
         var envVars = new Dictionary<string, string>(context.EnvironmentalVariables);
@@ -63,8 +77,24 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
 
     protected abstract string TestImageDockerfile { get; }
 
+    protected override async Task<IVolume> CreateDropletVolume(CancellationToken cancellationToken = default)
+    {
+        var dropletVolume = await base.CreateDropletVolume();
+        var changeOwner = new ContainerBuilder()
+            .WithImage(KnownImages.Cflinuxfs4)
+            .WithVolumeMount(dropletVolume, RemoteTemp / "droplet")
+            .WithCommand("/bin/bash", "-c", "chown -R 2000:2000 /tmp/droplet")
+            .Build();
+        await dropletVolume.CreateAsync(cancellationToken).ConfigureAwait(false);
+
+        await changeOwner.StartAsync(cancellationToken);
+        await changeOwner.GetExitCodeAsync(cancellationToken);
+        return dropletVolume;
+    }
+
     public override async Task InitializeAsync()
     {
+        // TestcontainersSettings.Logger = TestContext.GetLogger("Testcontainers");
         DockerHelper.SwitchContainersPlatform(ContainerPlatform.Linux);
         var dockerContextDirectory = DirectoryHelper.CurrentAssemblyFolder / "_empty";
         dockerContextDirectory.CreateDirectory();
@@ -82,8 +112,8 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
 
     public override Task DisposeAsync() => Task.CompletedTask;
 
-    protected override AbsolutePath RemoteHome => (AbsolutePath)"/home/vcap";
-    protected override AbsolutePath RemoteTemp => (AbsolutePath)"/tmp";
+    internal  override AbsolutePath RemoteHome => (AbsolutePath)"/home/vcap";
+    internal  override AbsolutePath RemoteTemp => (AbsolutePath)"/tmp";
     protected override IWaitForContainerOS WaitStrategy => Wait.ForUnixContainer();
 
     protected override Func<ContainerBuilder, ContainerBuilder> StagingContainerConfigurer => _ => _
@@ -92,31 +122,31 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
     protected override Func<ContainerBuilder, ContainerBuilder> LaunchingContainerConfigurer => _ => _
         .WithResourceMapping(new FileInfo(DirectoryHelper.CurrentAssemblyFolder / LaunchScriptName), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions);
 
-    public override async Task<StageResults> Stage(StageContext context, ITestOutputHelper? output = null, CancellationToken cancellationToken = default)
+    public override async Task<StageResults> Stage(StageContext context, CancellationToken cancellationToken = default)
     {
-        var result = await base.Stage(context, output, cancellationToken);
+        var result = await base.Stage(context, cancellationToken);
         // gotta untar it in a new container cuz our normal test image runs under vcap which doesn't have enough permissions to extract with stored linux attributes
-        var container = new ContainerBuilder()
-            .WithImage(KnownImages.Cflinuxfs4)
-            .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
-            .WithCommand("sh", "-c", "tar -xf /tmp/droplet/droplet.tar -C /tmp/droplet && chown -R vcap /tmp/droplet")
-            .Build();
-            
-        await container.StartAsync(cancellationToken)
-            .ConfigureAwait(false);
-        try
-        {
-            await container.GetExitCodeAsync(cancellationToken);
-            var logs = await container.GetLogsAsync(ct: cancellationToken);
-            if (!string.IsNullOrEmpty(logs.Stderr))
-            {
-                output?.WriteLine(logs.ToString());
-            }
-        }
-        catch (Exception)
-        {
-            // ignore
-        }
+        // var container = new ContainerBuilder()
+        //     .WithImage(KnownImages.Cflinuxfs4)
+        //     .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
+        //     .WithCommand("sh", "-c", "tar -xf /tmp/droplet/droplet.tar -C /tmp/droplet && chown -R vcap /tmp/droplet")
+        //     .Build();
+        //
+        // await container.StartAsync(cancellationToken)
+        //     .ConfigureAwait(false);
+        // try
+        // {
+        //     await container.GetExitCodeAsync(cancellationToken);
+        //     var logs = await container.GetLogsAsync(ct: cancellationToken);
+        //     if (!string.IsNullOrEmpty(logs.Stderr))
+        //     {
+        //         output?.WriteLine(logs.ToString());
+        //     }
+        // }
+        // catch (Exception)
+        // {
+        //     // ignore
+        // }
         return result;
     }
 }

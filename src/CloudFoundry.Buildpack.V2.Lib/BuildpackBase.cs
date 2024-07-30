@@ -84,7 +84,7 @@ public abstract class BuildpackBase
         {
             // copy buildpack to deps dir so we can invoke it as part of startup
 
-            var buildpackBinFolder = BuildpackRoot.Instance.BinDirectory;
+            var buildpackBinFolder = BuildpackRoot.Instance.BinDirectory.CurrentAbsolutePath;
             var buildpackFiles = Directory.EnumerateFiles(buildpackBinFolder)
                 .Select(x => (AbsolutePath)x)
                 // .Cast<AbsolutePath>()
@@ -92,7 +92,7 @@ public abstract class BuildpackBase
                 .ToList();
             foreach(var file in buildpackFiles)
             {
-                FileSystemTasks.CopyFile(file, context.MyDependenciesDirectory / file.Name);
+                FileSystemTasks.CopyFile(file, context.MyDependenciesDirectory.CurrentAbsolutePath / file.Name);
             }
 
             var extension = !IsLinux ? ".exe" : string.Empty;

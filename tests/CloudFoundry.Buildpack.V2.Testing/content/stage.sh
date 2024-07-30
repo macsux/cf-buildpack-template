@@ -1,4 +1,5 @@
 #!/bin/bash
+
 shopt -s nullglob
 getBuildpackDir(){
   buildpackName=$1
@@ -6,8 +7,9 @@ getBuildpackDir(){
   echo $dirName
 }
 #echo $@
-
 tmp=/tmp
+dropletDir=/tmp/droplet
+
 echo $@
 buildpackList=()
 
@@ -37,8 +39,11 @@ builder="$tmp/lifecycle/builder"
 if [ "$skipDetect" = true ]; then
   builder="$builder -skipDetect "
 fi
-
-builder="$builder -buildArtifactsCacheDir $tmp/cache -buildDir /home/vcap/app -buildpacksDir $tmp/buildpacks -outputDroplet $tmp/droplet/droplet.tar -buildpackOrder $buildpackOrder"
+mkdir $tmp/droplet/cache
+builder="$builder -buildArtifactsCacheDir $tmp/droplet/cache -buildDir /home/vcap/app -buildpacksDir $tmp/buildpacks -outputDroplet $dropletDir/droplet.tar -buildpackOrder $buildpackOrder"
 echo $builder
 $builder
-#tar -xf $tmp/droplet/droplet.tar -C $tmp/droplet
+
+# unpack droplet tarball into <VOLUME>/droplet subdir
+#mkdir $dropletDir/droplet
+#tar -xf $dropletDir/droplet.tar -C $dropletDir/droplet

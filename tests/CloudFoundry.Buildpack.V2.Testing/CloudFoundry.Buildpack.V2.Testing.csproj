@@ -5,10 +5,14 @@
         <Nullable>enable</Nullable>
         <IsPackable>true</IsPackable>
         <NoWarn>NU5110;NU5111</NoWarn>
+        <DebugSymbols>true</DebugSymbols>
+        <EmbedAllSources>true</EmbedAllSources>
+        <DebugType>portable</DebugType>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="FluentAssertions" Version="6.12.0" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.2" />
+        <PackageReference Include="Neovolve.Logging.Xunit" Version="6.0.0" />
         <PackageReference Include="Nuke.Common" Version="8.0.0" />
         <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
         <PackageReference Include="Testcontainers" Version="3.7.0" />

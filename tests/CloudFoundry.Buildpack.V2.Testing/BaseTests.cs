@@ -1,6 +1,6 @@
-﻿using CloudFoundry.Buildpack.V2.Testing;
+﻿using Assert = Xunit.Assert;
 
-namespace MyBuildpack.Tests;
+namespace CloudFoundry.Buildpack.V2.Testing;
 
 public abstract class BaseTests
 {
@@ -11,6 +11,7 @@ public abstract class BaseTests
     {
         _output = output;
         _fixture = fixture;
-        fixture.OutputStream = new TestOutputStream(output);
+        // ContainersPlatformFixture.OutputStream = new TestOutputStream(output);
+        TestContext.TestOutputHelper = output;
     }
 }
