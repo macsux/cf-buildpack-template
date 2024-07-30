@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-<!--    <Import Project="..\..\testing.props"/>-->
     <PropertyGroup>
         <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
         <RootNamespace>CloudFoundry.Buildpack.V2.MyBuildpack</RootNamespace>
@@ -11,9 +10,9 @@
         <LangVersion>latest</LangVersion>
         <OutputType>Exe</OutputType>
         <TargetFrameworks>net8.0;net48</TargetFrameworks>
-        <TargetFramework>net8.0</TargetFramework>
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <IsPackable>false</IsPackable>
+        <IsBuildpack>true</IsBuildpack>
     </PropertyGroup>
     <!--#if (false) -->
     <PropertyGroup Condition="$(Configuration) == 'HttpModule'">

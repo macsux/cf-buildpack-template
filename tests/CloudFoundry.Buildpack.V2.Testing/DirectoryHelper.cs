@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Nuke.Common.Tooling;
 using Nuke.Common.Utilities.Collections;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
@@ -13,4 +14,8 @@ public static class DirectoryHelper
     
     static Lazy<AbsolutePath> _currentAssemblyFolder = new(() => ((AbsolutePath)Assembly.GetExecutingAssembly().Location).Parent);
     internal static AbsolutePath CurrentAssemblyFolder => _currentAssemblyFolder.Value;
+    
+    internal static AbsolutePath GetPackageDirectory(string packageId) => NuGetPackageResolver.GetGlobalInstalledPackage(packageId, null, null)?.Directory
+                                                                          ?? throw new InvalidOperationException($"Package {packageId} not found in nuget cache");
+    
 }

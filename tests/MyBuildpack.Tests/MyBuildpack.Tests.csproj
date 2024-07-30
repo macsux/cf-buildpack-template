@@ -23,9 +23,18 @@
         </PackageReference>
         <PackageDownload Include="CloudFoundry.Buildpack.V2.Lifecycle" Version="[4.0.0]" />
         <PackageReference Condition="'$(UsePackages)' == 'true'" Include="CloudFoundry.Buildpack.V2.Testing" Version="4.*"/>
-        <ProjectReference Condition="'$(UsePackages)' == 'false'" Include="..\CloudFoundry.Buildpack.V2.Testing\CloudFoundry.Buildpack.V2.Testing.csproj" />
+        <ProjectReference Condition="'$(UsePackages)' == 'false'" Include="..\CloudFoundry.Buildpack.V2.Testing\CloudFoundry.Buildpack.V2.Testing.csproj" >
+            <IncludeAssets>Compile;Runtime;Build;Native;ContentFiles</IncludeAssets>
+        </ProjectReference>
     </ItemGroup>
 
+    <ItemGroup>
+        <Using Include="Xunit"/>
+        <Using Include="Xunit.Abstractions"/>
+        <Using Include="FluentAssertions"/>
+        <Using Include="System.IO"/>
+        <Using Include="System.Threading.Tasks" />
+    </ItemGroup>
 
 
 </Project>

@@ -2,6 +2,7 @@
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.NerdbankGitVersioning;
+using Serilog;
 using Project = Nuke.Common.ProjectModel.Project;
 
 namespace CloudFoundry.Buildpack.V2.Build;
@@ -39,8 +40,9 @@ public interface IBuildpackBase : INukeBuild
         .Executes(() =>
         {
             WorkDirectory.CreateOrCleanDirectory();
+            Log.Information("Cleaned out {WorkDirectory}", WorkDirectory);
         });
     
     string GetPackageZipName(string runtime) => $"{BuildpackProjectName}-{runtime}-{GitVersion.SemVer1}.zip";
-
+    
 }

@@ -4,6 +4,7 @@
         <TargetFramework>net48</TargetFramework>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
         <LangVersion>latest</LangVersion>
+        <IsInjectable Condition="$(Configuration) == 'HttpModule'">True</IsInjectable>
     </PropertyGroup>
 
     <ItemGroup>

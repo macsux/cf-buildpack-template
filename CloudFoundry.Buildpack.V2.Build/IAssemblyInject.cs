@@ -9,6 +9,7 @@ using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.NuGet;
 using Nuke.Common.Utilities;
+using Serilog;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 namespace CloudFoundry.Buildpack.V2.Build;
@@ -16,14 +17,24 @@ namespace CloudFoundry.Buildpack.V2.Build;
 
 public interface IAssemblyInject : IBuildpackBase
 {
-    [Parameter("Injection Projects")]
-    string? InjectionProject { get; }
+    static string? InjectionProject { get; set; }
 
+    Target TryFindInjectionProject => _ => _
+        .Unlisted()
+        .Executes(() =>
+        {
+            var injectable = Solution.GetAllProjects("*")
+                .FirstOrDefault(x => x.GetMSBuildProject(Configuration).GetProperty("IsInjectable")?.EvaluatedValue.ToLower() == "true");
+            Log.Logger.Information("Injectable project: {Project}", injectable?.ToString() ?? "none");
+            InjectionProject = injectable?.Name;
+        });
 
     Target BuildInjectors => _ => _
         .Description("Packages assemblies referenced by project for side-by-side loading")
-        .DependsOn(EnsureCleanWorkDirectory)
-        .Requires(() => InjectionProject)
+        .Unlisted()
+        .DependsOn(EnsureCleanWorkDirectory, TryFindInjectionProject)
+        .OnlyWhenDynamic(() => InjectionProject != null)
+        // .Requires(() => InjectionProject)
         .Executes(() =>
         {
             var project = Solution.GetAllProjects(InjectionProject).FirstOrDefault() ?? throw new Exception($"Project {InjectionProject} is not found");

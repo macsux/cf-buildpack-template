@@ -1,4 +1,5 @@
 ﻿using CloudFoundry.Buildpack.V2.Build;
+using GlobExpressions;
 using Nuke.Common;
 using Nuke.Common.IO;
 using Nuke.Common.Tooling;
@@ -50,43 +51,65 @@ partial class Build
 
     protected override void OnBuildInitialized()
     {
+        if (!ExecutionPlan.Any(x => x.Name == nameof(PublishTemplate))) return; // skip getting all the nbgv versions if we're not running any template publishing targets
+        if(!string.IsNullOrWhiteSpace(GitTasks.Git("status --porcelain", workingDirectory: RootDirectory, logOutput: false, logInvocation: false).StdToText()))
+        {
+            throw new InvalidOperationException("Can't correctly generate GitVersion numbers while there are uncommited changes");
+        }
         TemplateVersion = NerdbankGitVersioningTasks.NerdbankGitVersioningGetVersion(c => c
             .DisableProcessLogOutput()
+            .DisableProcessLogInvocation()
             .SetProcessWorkingDirectory(TemplateConfigDirectory)
             .SetFormat(NerdbankGitVersioningFormat.json)
         ).Result ?? throw new InvalidOperationException("Unable to obtain template version");
-        
+
         LifecycleVersion = NerdbankGitVersioningTasks.NerdbankGitVersioningGetVersion(c => c
             .DisableProcessLogOutput()
+            .DisableProcessLogInvocation()
             .SetProcessWorkingDirectory(RootDirectory / "lifecycle")
             .SetFormat(NerdbankGitVersioningFormat.json)
         ).Result ?? throw new InvalidOperationException("Unable to obtain lifecycle version");
-        
+
         BuildVersion = NerdbankGitVersioningTasks.NerdbankGitVersioningGetVersion(c => c
             .DisableProcessLogOutput()
+            .DisableProcessLogInvocation()
             .SetProcessWorkingDirectory(RootDirectory / "CloudFoundry.Buildpack.V2.Build")
             .SetFormat(NerdbankGitVersioningFormat.json)
         ).Result ?? throw new InvalidOperationException("Unable to obtain template version");
-        
+
         LibVersion = NerdbankGitVersioningTasks.NerdbankGitVersioningGetVersion(c => c
             .DisableProcessLogOutput()
+            .DisableProcessLogInvocation()
             .SetProcessWorkingDirectory(RootDirectory / "src" / "CloudFoundry.Buildpack.V2.Lib")
             .SetFormat(NerdbankGitVersioningFormat.json)
         ).Result ?? throw new InvalidOperationException("Unable to obtain buildpack library version");
-        
+
         AnalyzerVersion = NerdbankGitVersioningTasks.NerdbankGitVersioningGetVersion(c => c
             .DisableProcessLogOutput()
+            .DisableProcessLogInvocation()
             .SetProcessWorkingDirectory(RootDirectory / "src" / "CloudFoundry.Buildpack.V2.Analyzers")
             .SetFormat(NerdbankGitVersioningFormat.json)
         ).Result ?? throw new InvalidOperationException("Unable to obtain analyzer project version");
-        
+
         TestVersion = NerdbankGitVersioningTasks.NerdbankGitVersioningGetVersion(c => c
             .DisableProcessLogOutput()
+            .DisableProcessLogInvocation()
             .SetProcessWorkingDirectory(RootDirectory / "tests" / "CloudFoundry.Buildpack.V2.Testing")
             .SetFormat(NerdbankGitVersioningFormat.json)
         ).Result ?? throw new InvalidOperationException("Unable to obtain test project version");
     }
 
+    Target CleanObjBin => _ => _
+        .Executes(() =>
+        {
+            var dirsToDelete = Glob.Directories(RootDirectory, "**/bin").Union(Glob.Directories(RootDirectory, "**/obj"));
+            foreach (var dir in dirsToDelete)
+            {
+                (RootDirectory / dir).DeleteDirectory();
+                Log.Logger.Information("Deleted {Directory}", dir);
+            }
+
+        });
     Target PublishTemplate => _ => _
         .Description("Generate template NuGet package")
         .Executes(() =>

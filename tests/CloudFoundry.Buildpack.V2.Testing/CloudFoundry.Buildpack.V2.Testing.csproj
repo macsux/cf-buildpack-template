@@ -20,6 +20,7 @@
     </ItemGroup>
     <ItemGroup>
         <None Include="build\**" Pack="True" PackagePath="build\" />
-        <None Include="content\**" Pack="True" PackagePath="content\" />
+        <Content Include="contentFiles\**" TargetPath="%(Filename)%(Extension)" PackagePath="contentFiles\any\any" Pack="True" CopyToOutputDirectory="Always" PackageCopyToOutput="true" />
     </ItemGroup>
+
 </Project>

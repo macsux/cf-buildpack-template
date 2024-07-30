@@ -43,10 +43,6 @@
             "VSCode"
           ]
         },
-        "InjectionProject": {
-          "type": "string",
-          "description": "Injection Project"
-        },
         "NoLogo": {
           "type": "boolean",
           "description": "Disables displaying the NUKE logo"
@@ -89,13 +85,16 @@
             "type": "string",
             "enum": [
               "BuildInjectors",
+              "CleanObjBin",
               "EnsureCleanWorkDirectory",
               "GithubRelease",
               "MakeOffline",
               "Publish",
               "PublishBuildpack",
               "PublishTemplate",
-              "ReleaseTemplate"
+              "ReleaseTemplate",
+              "TryFindInjectionProject",
+              "UpdatePackages"
             ]
           }
         },
@@ -110,13 +109,16 @@
             "type": "string",
             "enum": [
               "BuildInjectors",
+              "CleanObjBin",
               "EnsureCleanWorkDirectory",
               "GithubRelease",
               "MakeOffline",
               "Publish",
               "PublishBuildpack",
               "PublishTemplate",
-              "ReleaseTemplate"
+              "ReleaseTemplate",
+              "TryFindInjectionProject",
+              "UpdatePackages"
             ]
           }
         },

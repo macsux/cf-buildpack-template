@@ -121,32 +121,5 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
 
     protected override Func<ContainerBuilder, ContainerBuilder> LaunchingContainerConfigurer => _ => _
         .WithResourceMapping(new FileInfo(DirectoryHelper.CurrentAssemblyFolder / LaunchScriptName), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions);
-
-    public override async Task<StageResults> Stage(StageContext context, CancellationToken cancellationToken = default)
-    {
-        var result = await base.Stage(context, cancellationToken);
-        // gotta untar it in a new container cuz our normal test image runs under vcap which doesn't have enough permissions to extract with stored linux attributes
-        // var container = new ContainerBuilder()
-        //     .WithImage(KnownImages.Cflinuxfs4)
-        //     .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
-        //     .WithCommand("sh", "-c", "tar -xf /tmp/droplet/droplet.tar -C /tmp/droplet && chown -R vcap /tmp/droplet")
-        //     .Build();
-        //
-        // await container.StartAsync(cancellationToken)
-        //     .ConfigureAwait(false);
-        // try
-        // {
-        //     await container.GetExitCodeAsync(cancellationToken);
-        //     var logs = await container.GetLogsAsync(ct: cancellationToken);
-        //     if (!string.IsNullOrEmpty(logs.Stderr))
-        //     {
-        //         output?.WriteLine(logs.ToString());
-        //     }
-        // }
-        // catch (Exception)
-        // {
-        //     // ignore
-        // }
-        return result;
-    }
+    
 }

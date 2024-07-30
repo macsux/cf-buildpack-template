@@ -68,6 +68,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
     protected virtual Func<ContainerBuilder, ContainerBuilder> StagingContainerConfigurer => builder => builder;
     protected virtual Func<ContainerBuilder, ContainerBuilder> LaunchingContainerConfigurer => builder => builder;
 
+    
     ContainerBuilder CommonContainerConfigurer(ContainerBuilder builder, CloudFoundryContainerContext context)
     {
         var envVars = GetContainerEnvironmentalVariables(context);
@@ -77,12 +78,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         {
             builder = builder.WithEnvironment(key, value);
         }
-
-        // if (OutputStream == null)
-        // {
-        //     throw new InvalidOperationException(
-        //         "OutputStream is not set. Inject `ITestOutputHelper output` into your test class and add 'fixture.OutputStream = new TestOutputStream(output);' to your constructor");
-        // }
+        
         return builder
             .WithImage(ContainerImage)
             .WithResourceMapping(new DirectoryInfo(context.LifecycleDirectory), (RemoteTemp / "lifecycle").AsLinuxPath(), ReadAndExecutePermissions)
@@ -122,11 +118,6 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         containerBuilder = containerBuilder
                 .WithCommand(LaunchCommand.ToArray())
                 .WithVolumeMount(context.DropletVolume, RemoteTemp / "droplet")
-                // .WithResourceMapping(new FileInfo(context.DropletDirectory / "staging_info.yml"), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions)
-                // .WithResourceMapping(new DirectoryInfo(context.ProfileDDirectory), (RemoteHome / ".profile.d").AsLinuxPath())
-                // .WithBindMount(context.ApplicationDirectory, RemoteHome / "app")
-                // .WithBindMount(context.DependenciesDirectory,  RemoteHome / "deps")
-                // .WithBindMount(context.TemporaryDirectory,  RemoteHome / "tmp")
                 .WithEnvironment("DEPS_DIR", (RemoteHome / "deps").AsLinuxPath())
                 .WithEnvironment("HOME", RemoteHome / "app")
                 .WithWaitStrategy(waitStrategy)
