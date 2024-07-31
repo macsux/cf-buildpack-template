@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/AArnott/Nerdbank.GitVersioning/master/src/NerdBank.GitVersioning/version.schema.json",
   "version": "4.0",
   "pathFilters": [
-    ":!README.md",
+    ":!/build/Build.Template.cs",
     ":!/lifecycle",
     ":!/CloudFoundry.Buildpack.V2.Build",
     ":!/src/CloudFoundry.Buildpack.V2.Analyzers",

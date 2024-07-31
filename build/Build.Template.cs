@@ -1,4 +1,5 @@
-﻿using CloudFoundry.Buildpack.V2.Build;
+﻿using System.Text.RegularExpressions;
+using CloudFoundry.Buildpack.V2.Build;
 using GlobExpressions;
 using Nuke.Common;
 using Nuke.Common.IO;
@@ -41,7 +42,6 @@ partial class Build
     NerdbankGitVersioning AnalyzerVersion { get; set; } = null!;
     NerdbankGitVersioning TestVersion { get; set; } = null!;
 
-    
     AbsolutePath TemplatePackage => ArtifactsDirectory / $"{NugetPackageId}.{TemplateVersion.NuGetPackageVersion}.nupkg";
     AbsolutePath LifecyclePackage => ArtifactsDirectory / $"{NugetPackageId}.Lifecycle.{LifecycleVersion.NuGetPackageVersion}.nupkg";
     AbsolutePath TestPackage => ArtifactsDirectory / $"{NugetPackageId}.Testing.{TestVersion.NuGetPackageVersion}.nupkg";
@@ -108,8 +108,8 @@ partial class Build
                 (RootDirectory / dir).DeleteDirectory();
                 Log.Logger.Information("Deleted {Directory}", dir);
             }
-
         });
+    
     Target PublishTemplate => _ => _
         .Description("Generate template NuGet package")
         .Executes(() =>
@@ -122,6 +122,7 @@ partial class Build
                 .SetTargetPath(RootDirectory / "buildpack.nuspec")
                 .SetNoDefaultExcludes(true)
                 .EnableNoPackageAnalysis()
+                .SetProperty("ContinuousIntegrationBuild", "true")
                 .SetVersion(TemplateVersion.NuGetPackageVersion)
                 .SetOutputDirectory(ArtifactsDirectory));
             
@@ -129,12 +130,14 @@ partial class Build
                 .SetTargetPath(RootDirectory / "lifecycle" / "CloudFoundry.Buildpack.V2.Lifecycle.nuspec")
                 .SetNoDefaultExcludes(true)
                 .EnableNoPackageAnalysis()
+                .SetProperty("ContinuousIntegrationBuild", "true")
                 .SetVersion(LifecycleVersion.NuGetPackageVersion)
                 .SetOutputDirectory(ArtifactsDirectory));
             
             DotNetTasks.DotNetPack(s => s
                 .SetProcessWorkingDirectory(RootDirectory)
                 .SetProject(RootDirectory / "CloudFoundry.Buildpack.V2.Build" / "CloudFoundry.Buildpack.V2.Build.csproj")
+                .SetProperty("ContinuousIntegrationBuild", "true")
                 .SetVersion(BuildVersion.NuGetPackageVersion)
                 .SetOutputDirectory(ArtifactsDirectory)
             );
@@ -142,6 +145,7 @@ partial class Build
             DotNetTasks.DotNetPack(s => s
                 .SetProcessWorkingDirectory(RootDirectory)
                 .SetProject(RootDirectory / "src" / "CloudFoundry.Buildpack.V2.Lib" / "CloudFoundry.Buildpack.V2.Lib.csproj")
+                .SetProperty("ContinuousIntegrationBuild", "true")
                 .SetVersion(LibVersion.NuGetPackageVersion)
                 .SetOutputDirectory(ArtifactsDirectory)
             );
@@ -149,6 +153,7 @@ partial class Build
             DotNetTasks.DotNetPack(s => s
                 .SetProcessWorkingDirectory(RootDirectory)
                 .SetProject(RootDirectory / "src" / "CloudFoundry.Buildpack.V2.Analyzers" / "CloudFoundry.Buildpack.V2.Analyzers.csproj")
+                .SetProperty("ContinuousIntegrationBuild", "true")
                 .SetVersion(AnalyzerVersion.NuGetPackageVersion)
                 .SetOutputDirectory(ArtifactsDirectory)
             );
@@ -156,6 +161,7 @@ partial class Build
             DotNetTasks.DotNetPack(s => s
                 .SetProcessWorkingDirectory(RootDirectory)
                 .SetProject(RootDirectory / "tests" / "CloudFoundry.Buildpack.V2.Testing" / "CloudFoundry.Buildpack.V2.Testing.csproj")
+                .SetProperty("ContinuousIntegrationBuild", "true")
                 .SetVersion(TestVersion.NuGetPackageVersion)
                 .SetOutputDirectory(ArtifactsDirectory)
             );
@@ -175,9 +181,19 @@ partial class Build
             
             Assert.True(File.Exists(TemplatePackage), $"{TemplatePackage} not found");
             var packages = new []{ TemplatePackage, LifecyclePackage, BuildPackage, AnalyzerPackage, LibPackage, TestPackage };
-            foreach (var package in packages)
+            var packageNameAndVersionRegex = new Regex("^(?<PackageName>.+)\\.(?<Version>(?:[0-9]\\.){2}(?:[0-9])(?:-.+)*)\\.nupkg$");
+            var packageDetails = packages.Select(x =>
             {
-                NuGetTasks.NuGet($"push {package} -Source {NuGetSource} -ApiKey {NugetApiKey} -SkipDuplicate");
+                var match = packageNameAndVersionRegex.Match(x.Name);
+                return (Name: match.Groups["PackageName"].Value, Version: match.Groups["Version"].Value, Path: x);
+            }).ToList();
+            List<(string Name, string Version)> newPackages = new();
+            List<(string Name, string Version)> existingPackages = new();
+            foreach (var (name, version, path) in packageDetails)
+            {
+                var output = NuGetTasks.NuGet($"push {path} -Source {NuGetSource} -ApiKey {NugetApiKey} -SkipDuplicate");
+                if(output.ToString()?.ToLower().Contains("duplicate") ?? false)
+                    existingPackages.Add((name, version));
             }
 
             // NuGetTasks.NuGetPush(s => s
