@@ -12,9 +12,14 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageDownload Include="nbgv" Version="[3.6.133]" />
+        <PackageReference Include="FIGlet-_-lib" Version="1.0.8" />
         <PackageReference Include="Nuke.Common" Version="8.0.0" />
         <PackageReference Include="Octokit" Version="9.1.1" />
         <PackageReference Include="SharpZipLib" Version="1.4.2" />
         <PackageReference Include="System.Reflection.MetadataLoadContext" Version="8.0.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <Content Remove="FigletFonts\**" />
+        <EmbeddedResource Include="FigletFonts\**" />
     </ItemGroup>
 </Project>

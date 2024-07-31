@@ -8,4 +8,5 @@ public interface IBuildBuildpack :
     IUpdateDependencies,
     IReleaseGithub,
     IMakeOfflineBuildpack,
-    ITest;
+    ITest,
+    IPrintLogo;

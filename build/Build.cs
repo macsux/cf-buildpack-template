@@ -13,6 +13,9 @@ using Nuke.Components;
 [UnsetVisualStudioEnvironmentVariables]
 partial class Build : NukeBuild, IBuildBuildpack
 {
+    IBuildBuildpack _this => this;
+    public Build() => _this.PrintLogo();
+
     IEnumerable<Project> ITest.TestProjects => Partition.GetCurrent(Solution.GetAllProjects("*.Tests"));
     [Solution] public Solution Solution { get; set; } = null!;
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
