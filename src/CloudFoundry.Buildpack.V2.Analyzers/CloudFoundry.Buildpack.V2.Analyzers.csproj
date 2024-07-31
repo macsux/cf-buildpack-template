@@ -9,7 +9,8 @@
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <NoWarn>NU5128</NoWarn>
         <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
-
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
     </PropertyGroup>
 
     <ItemGroup>

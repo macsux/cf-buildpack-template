@@ -9,6 +9,10 @@
         <DebugSymbols>true</DebugSymbols>
         <EmbedAllSources>true</EmbedAllSources>
         <DebugType>portable</DebugType>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
     <ItemGroup>
         <PackageDownload Include="nbgv" Version="[3.6.133]" />
