@@ -7,6 +7,14 @@
     "Release to Github": {
       "commandName": "Project",
       "commandLineArgs": "GithubRelease"
+    },
+    "Test": {
+      "commandName": "Project",
+      "commandLineArgs": "Test"
+    },
+    "Update Packages": {
+      "commandName": "Project",
+      "commandLineArgs": "UpdatePackages"
     }
   }
 }

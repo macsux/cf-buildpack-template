@@ -93,6 +93,7 @@
               "PublishBuildpack",
               "PublishTemplate",
               "ReleaseTemplate",
+              "Test",
               "TryFindInjectionProject",
               "UpdatePackages"
             ]
@@ -117,6 +118,7 @@
               "PublishBuildpack",
               "PublishTemplate",
               "ReleaseTemplate",
+              "Test",
               "TryFindInjectionProject",
               "UpdatePackages"
             ]

@@ -6,12 +6,14 @@ using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.CloudFoundry;
+using Nuke.Components;
 
 [assembly: InternalsVisibleTo("MyBuildpackTests")]
 
 [UnsetVisualStudioEnvironmentVariables]
 partial class Build : NukeBuild, IBuildBuildpack
 {
+    IEnumerable<Project> ITest.TestProjects => Partition.GetCurrent(Solution.GetAllProjects("*.Tests"));
     [Solution] public Solution Solution { get; set; } = null!;
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
 
