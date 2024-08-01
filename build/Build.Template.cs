@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using CloudFoundry.Buildpack.V2.Build;
 using GlobExpressions;
+using NuGet.Packaging;
 using Nuke.Common;
 using Nuke.Common.IO;
 using Nuke.Common.Tooling;
@@ -8,6 +9,7 @@ using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.Git;
 using Nuke.Common.Tools.NerdbankGitVersioning;
 using Nuke.Common.Tools.NuGet;
+using Nuke.Common.Utilities.Collections;
 using Serilog;
 
 partial class Build
@@ -181,20 +183,30 @@ partial class Build
             
             Assert.True(File.Exists(TemplatePackage), $"{TemplatePackage} not found");
             var packages = new []{ TemplatePackage, LifecyclePackage, BuildPackage, AnalyzerPackage, LibPackage, TestPackage };
-            var packageNameAndVersionRegex = new Regex("^(?<PackageName>.+)\\.(?<Version>(?:[0-9]\\.){2}(?:[0-9])(?:-.+)*)\\.nupkg$");
+            var packageNameAndVersionRegex = new Regex(@"(?<PackageName>.+)\.(?<Version>(?:[0-9]+\.){2}(?:[0-9]+)(?:-.+)*)\.nupkg$");
             var packageDetails = packages.Select(x =>
             {
                 var match = packageNameAndVersionRegex.Match(x.Name);
+                if (!match.Success)
+                    throw new Exception("Regex match failed");
                 return (Name: match.Groups["PackageName"].Value, Version: match.Groups["Version"].Value, Path: x);
             }).ToList();
-            List<(string Name, string Version)> newPackages = new();
-            List<(string Name, string Version)> existingPackages = new();
+            IDictionary<string,string> newPackages = new Dictionary<string,string>();
+            IDictionary<string,string> existingPackages = new Dictionary<string,string>();
             foreach (var (name, version, path) in packageDetails)
             {
                 var output = NuGetTasks.NuGet($"push {path} -Source {NuGetSource} -ApiKey {NugetApiKey} -SkipDuplicate");
-                if(output.ToString()?.ToLower().Contains("duplicate") ?? false)
-                    existingPackages.Add((name, version));
+                var shortName = name.Replace("CloudFoundry.Buildpack.V2.", "").Replace("CloudFoundry.Buildpack.V2", "Template");
+                if(output.StdToText()?.Contains("Conflict") ?? false)
+                    existingPackages.Add(shortName, version);
+                else
+                    newPackages.Add(shortName, version);
             }
+
+            ReportSummary(d => d
+                .Apply(x => x.AddDictionary(newPackages))
+                .When(existingPackages.Any(), x => x
+                    .AddPair("Existing", string.Join(',', existingPackages.Keys))));
 
             // NuGetTasks.NuGetPush(s => s
             //     .SetSource(NuGetSource)
