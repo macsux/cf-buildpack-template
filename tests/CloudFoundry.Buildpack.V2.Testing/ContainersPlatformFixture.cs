@@ -116,7 +116,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         var containerBuilder = LaunchingContainerConfigurer(CommonContainerConfigurer(new(), context));
 
         var freeHostPort = NextFreePort();
-        var waitStrategy = context.WaitStrategy(WaitStrategy);
+        var waitStrategy = WaitStrategy.UntilPortIsAvailable(8080);
         containerBuilder = containerBuilder
                 .WithCommand(LaunchCommand.ToArray())
                 .WithVolumeMount(context.DropletVolume, RemoteTemp / "droplet")
@@ -125,6 +125,8 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
                 .WithWaitStrategy(waitStrategy)
                 .WithPortBinding(freeHostPort, 8080)
             ;
+        containerBuilder = context.ContainerCustomizer?.Invoke(containerBuilder) ?? containerBuilder;
+        
         
         var container = containerBuilder.Build();
         var result = new LaunchResult(container, freeHostPort);
@@ -197,6 +199,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
                 .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
                 // .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
             ;
+        containerBuilder = context.ContainerCustomizer?.Invoke(containerBuilder) ?? containerBuilder;
         
         foreach (var buildpackZip in context.Buildpacks)
         {

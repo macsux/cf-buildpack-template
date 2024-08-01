@@ -1,4 +1,5 @@
 ﻿using CloudFoundry.Buildpack.V2.Testing.Models;
+using DotNet.Testcontainers.Builders;
 using Nuke.Common.IO;
 using Nuke.Common.Tooling;
 
@@ -7,6 +8,8 @@ namespace CloudFoundry.Buildpack.V2.Testing;
 [PublicAPI]
 public class CloudFoundryContainerContext
 {
+    public Func<ContainerBuilder, ContainerBuilder>? ContainerCustomizer { get; set; }
+
     public CloudFoundryContainerContext()
     {
         VcapApplication = new()
