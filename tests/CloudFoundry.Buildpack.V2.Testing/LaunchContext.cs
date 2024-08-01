@@ -1,4 +1,5 @@
-﻿using DotNet.Testcontainers.Volumes;
+﻿using DotNet.Testcontainers.Configurations;
+using DotNet.Testcontainers.Volumes;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 
@@ -11,6 +12,7 @@ public class LaunchContext : CloudFoundryContainerContext
     public AbsolutePath DependenciesDirectory => DropletDirectory / "deps";
     public AbsolutePath ProfileDDirectory => DropletDirectory / "profile.d";
     public AbsolutePath TemporaryDirectory => DropletDirectory / "tmp";
+    public Func<IWaitForContainerOS, IWaitForContainerOS> WaitStrategy { get; set; } = strategy => strategy.UntilPortIsAvailable(8080);
 
     internal LaunchContext(IVolume dropletVolume, CloudFoundryStack stack)
     {

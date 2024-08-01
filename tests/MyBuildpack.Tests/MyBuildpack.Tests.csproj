@@ -2,8 +2,6 @@
     <Import Project="..\CloudFoundry.Buildpack.V2.Testing\build\CloudFoundry.Buildpack.V2.Testing.props"  Condition="'$(UsePackages)' == 'false'"/>
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
         <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>

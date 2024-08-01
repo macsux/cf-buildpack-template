@@ -16,6 +16,8 @@ namespace CloudFoundry.Buildpack.V2.Testing;
 [PublicAPI]
 public abstract class ContainersPlatformFixture : IAsyncLifetime
 {
+    public virtual TimeSpan DefaultStagingTimeout { get; set; } = TimeSpan.FromMinutes(3);
+    public virtual TimeSpan DefaultLaunchTimeout { get; set; } = TimeSpan.FromSeconds(90);
     internal static UnixFileModes ReadPermissions = UserRead | GroupRead | OtherRead;
 
     internal static UnixFileModes ReadAndExecutePermissions = ReadPermissions | UserExecute | GroupExecute | OtherExecute;
@@ -108,13 +110,13 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         var stopwatch = Stopwatch.StartNew();
         if (cancellationToken == CancellationToken.None)
         {
-            cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(120)).Token;
+            cancellationToken = new CancellationTokenSource(DefaultLaunchTimeout).Token;
         }
         
         var containerBuilder = LaunchingContainerConfigurer(CommonContainerConfigurer(new(), context));
 
         var freeHostPort = NextFreePort();
-        var waitStrategy = WaitStrategy.UntilPortIsAvailable(8080);
+        var waitStrategy = context.WaitStrategy(WaitStrategy);
         containerBuilder = containerBuilder
                 .WithCommand(LaunchCommand.ToArray())
                 .WithVolumeMount(context.DropletVolume, RemoteTemp / "droplet")
@@ -160,7 +162,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         var stopwatch = Stopwatch.StartNew();
         if (cancellationToken == CancellationToken.None)
         {
-            cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(120)).Token;
+            cancellationToken = new CancellationTokenSource(DefaultStagingTimeout).Token;
         }
         
         var containerBuilder = StagingContainerConfigurer(CommonContainerConfigurer(new(), context)); 

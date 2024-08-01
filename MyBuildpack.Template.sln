@@ -39,6 +39,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".template", ".template", "{
 	ProjectSection(SolutionItems) = preProject
 		.template.config\template.json = .template.config\template.json
 		buildpack.nuspec = buildpack.nuspec
+		.template.config\shared.props = .template.config\shared.props
+		.template.config\packable.props = .template.config\packable.props
 	EndProjectSection
 EndProject
 #endif

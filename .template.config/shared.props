@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+    <PropertyGroup Condition="$(IsPackable) != 'false'">
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    </PropertyGroup>
+    <PropertyGroup Condition="$(IncludeBuildOutput) != 'false'"> <!-- don't publish symbols for analyzers -->
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
+    <PropertyGroup>
+        <DebugSymbols>true</DebugSymbols>
+        <EmbedAllSources>true</EmbedAllSources>
+        <DebugType>portable</DebugType>
+    </PropertyGroup>
+    <ItemGroup Condition="$(IsPackable) != 'false'">
+        <Content Remove="version.json"/>
+        <None Include="version.json"/>
+    </ItemGroup>
+</Project>

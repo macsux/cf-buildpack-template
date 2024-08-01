@@ -1,17 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFrameworks>net8.0;net48</TargetFrameworks>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
-        <DebugSymbols>true</DebugSymbols>
-        <EmbedAllSources>true</EmbedAllSources>
-        <DebugType>portable</DebugType>
-        
     </PropertyGroup>
+    <Import Project="$(__RootDirectoryBuildDir).template.config\shared.props"/>
+
     <PropertyGroup>
         <CurrentPropsFileDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</CurrentPropsFileDir>
     </PropertyGroup>

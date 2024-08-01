@@ -1,10 +1,12 @@
 ﻿using System.Net;
+using JetBrains.Annotations;
 using MyBuildpackHostingStartup;
 
 [assembly: HostingStartup(typeof(MyBuildpackStartupInjector))]
 
 namespace MyBuildpackHostingStartup;
 
+[PublicAPI]
 public class MyBuildpackStartupInjector: IHostingStartup, IStartupFilter
 {
     public void Configure(IWebHostBuilder builder)

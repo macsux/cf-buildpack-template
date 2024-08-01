@@ -1,19 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
         <OutputType>Library</OutputType>
         <IsPackable>true</IsPackable>
-        <DebugSymbols>true</DebugSymbols>
-        <EmbedAllSources>true</EmbedAllSources>
-        <DebugType>portable</DebugType>
-        <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <EmbedUntrackedSources>true</EmbedUntrackedSources>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
+    <Import Project="$(__RootDirectoryBuildDir).template.config\shared.props"/>
+
     <ItemGroup>
         <PackageDownload Include="nbgv" Version="[3.6.133]" />
         <PackageReference Include="FIGlet-_-lib" Version="1.0.8" />

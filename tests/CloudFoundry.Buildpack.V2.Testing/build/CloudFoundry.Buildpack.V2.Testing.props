@@ -2,7 +2,4 @@
     <PropertyGroup>
         <CurrentPropsFileDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</CurrentPropsFileDir>
     </PropertyGroup>
-<!--    <ItemGroup>-->
-<!--        <Content Include="$(CurrentPropsFileDir)..\content\**" CopyToOutputDirectory="Always"/>-->
-<!--    </ItemGroup>-->
 </Project>

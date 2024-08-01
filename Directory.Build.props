@@ -12,8 +12,14 @@
         <__RootDirectoryBuildDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))</__RootDirectoryBuildDir>
     </PropertyGroup>
     <ItemGroup>
-         <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" PrivateAssets="all" /> 
-
+         <PackageReference Include="JetBrains.Annotations" Version="2023.3.0" PrivateAssets="all">
+             <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+         </PackageReference>
+    </ItemGroup>
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+            <_Parameter1>$(AssemblyName).Tests</_Parameter1>
+        </AssemblyAttribute>
     </ItemGroup>
     <!--#if (false) -->
     <PropertyGroup>

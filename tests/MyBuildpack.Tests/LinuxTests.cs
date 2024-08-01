@@ -1,3 +1,4 @@
+#if(!IsHttpModuleBuildpack)
 using CloudFoundry.Buildpack.V2.Testing;
 using NuGet.Versioning;
 using Nuke.Common.IO;
@@ -79,3 +80,4 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
     }
 #endif
 }
+#endif

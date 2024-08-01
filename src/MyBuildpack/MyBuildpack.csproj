@@ -1,13 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
         <RootNamespace>CloudFoundry.Buildpack.V2.MyBuildpack</RootNamespace>
         <AssemblyName>buildpack</AssemblyName>
         <OutputType>Exe</OutputType>
-        <Nullable>enable</Nullable>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <WarningsNotAsErrors>IL2026;IL2104</WarningsNotAsErrors>
-        <LangVersion>latest</LangVersion>
         <OutputType>Exe</OutputType>
         <TargetFrameworks>net8.0;net48</TargetFrameworks>
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
