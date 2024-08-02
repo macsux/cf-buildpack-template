@@ -9,8 +9,9 @@ namespace CloudFoundry.Buildpack.V2.Build;
 
 internal class CacheBuilder
 {
-    public static void CopyLibs(Project project, AbsolutePath libsDir)
+    public static void CopyLibs(Project project, AbsolutePath libsDir, params string[] excludePackages)
     {
+        var excludePackagesHashtable = excludePackages.Distinct().ToHashSet();
         // var project = Solution.GetProject("MyBuildpackModule") ?? throw new InvalidOperationException("Project MyBuildpackModule not found");
         var assemblyName = project.GetProperty("AssemblyName") ?? project.Name;
         var tfm = project.GetProperty("TargetFramework");
@@ -51,9 +52,14 @@ internal class CacheBuilder
                 ?.Value as JObject ?? throw new InvalidOperationException("Unable to locate target TFM in assets file");
         }
         
+        (string Name, string Version) SplitPackageName(string name)
+        {
+            var split = name.Split("/");
+            return (split[0], split[1]);
+        }
         var referenceAssemblies = frameworkNode!
 		    .Cast<JProperty>()
-		    .Where(x => x.Value["type"]?.ToString() == "package")
+		    .Where(x => x.Value["type"]?.ToString() == "package" && !excludePackagesHashtable.Contains(SplitPackageName(x.Name).Name))
 		    .SelectMany(item =>
 		    {
 			    var assemblyNameAndVersion = item.Name;

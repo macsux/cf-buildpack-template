@@ -113,6 +113,7 @@ public interface IAssemblyInject : IBuildpackBase
                 var depsSourceFilePath = mainAssemblyPath.Parent / depsFileName;
                 var depsTargetFilePath = publishWorkDirectory / "lib" / depsFileName;
                 CopyFile(depsSourceFilePath, depsTargetFilePath);
+                var depsJson = JObject.Parse(File.ReadAllText(depsTargetFilePath));
                 File.WriteAllText(publishWorkDirectory / "lib" / ".hostStartup", string.Join("\n", hostStartupModules));
 
                 SwitchDepsLibrariesToPackageType(project, depsTargetFilePath);

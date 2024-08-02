@@ -2,7 +2,10 @@
     <PropertyGroup>
         <TargetFramework>net48</TargetFramework>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-        <IsInjectable Condition="$(Configuration) == 'HttpModule'">True</IsInjectable>
+        <IsInjectable>True</IsInjectable>
+        <!--#if (false) -->
+        <IsInjectable Condition="$(Configuration) != 'HttpModule'">False</IsInjectable>
+        <!--#endif -->
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Lib.Harmony" Version="2.0.2" />

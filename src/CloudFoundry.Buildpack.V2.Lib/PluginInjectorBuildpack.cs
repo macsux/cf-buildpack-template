@@ -75,6 +75,7 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 
 	        foreach (var additionalDepFile in additionalDeps)
 	        {
+		        Console.WriteLine($"Adjusting {appDepsFile} to to include dependencies from {additionalDepFile}");
 	            JsonNode additionalDepJson = JsonNode.Parse(File.ReadAllText(additionalDepFile))!;
 	            // if our additional deps targets something like .NETCoreApp,Version=v8.0 when primary app is targeting .NETCoreApp,Version=v8.0/linux-x64,
 	            // make the secondary deps RID specific as part of the merge
