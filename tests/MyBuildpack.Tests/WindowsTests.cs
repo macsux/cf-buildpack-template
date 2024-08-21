@@ -54,7 +54,7 @@ public class WindowsTests(ITestOutputHelper output, WindowsStackFixture fixture)
         // stageContext.SkipDetect = true;
         stageContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "win-x64" / "buildpack.zip");
         var stageResults = await fixture.Stage(stageContext);
-        var droplet = await stageResults.GetDroplet();
+        using var droplet = await stageResults.GetDroplet();
         // assert staging results
         AbsolutePath contribFile = droplet.ApplicationDirectory / "contrib.txt";
         contribFile.Should().BeExistingFile();

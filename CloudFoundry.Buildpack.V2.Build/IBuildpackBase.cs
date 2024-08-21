@@ -16,7 +16,7 @@ public interface IBuildpackBase : INukeBuild
     AbsolutePath TestsDirectory => RootDirectory / "tests";
     AbsolutePath WorkDirectory => TemporaryDirectory / "pack";
 
-    Solution Solution { get; }
+    [Solution] Solution Solution { get; }
 
     [Parameter]
     string Configuration => TryGetValue(() => Configuration) ?? "Debug";

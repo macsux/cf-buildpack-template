@@ -58,12 +58,6 @@ internal class WebConfig : IDisposable
     {
         var libraryFiles = Directory.EnumerateFiles(assembliesDir, "*.dll", SearchOption.AllDirectories).ToList();
 
-        // var probingDirs = libraryFiles
-        //     .Select(x => ((AbsolutePath)x).Parent)
-        //     .Select(x => PathConstruction.GetRelativePath(_appDir, x))
-        //     .ToList();
-		
-        // Console.WriteLine("Applying assembly loading information to web.config for following:");
         var assemblyNames = libraryFiles.Select(file =>
             {
                 AssemblyName assemblyName = null!;
@@ -112,8 +106,6 @@ internal class WebConfig : IDisposable
 
             foreach (var assemblyVersion in assembliesByName)
             {
-
-                
                 var codeBaseNode = (XmlElement?)dependentAssemblyNode.SelectSingleNode($"ms:codeBase[@version='{assemblyVersion.AssemblyName.Version}']", _ns);
                 if (codeBaseNode == null)
                 {

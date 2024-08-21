@@ -10,25 +10,29 @@ using System.Web;
 using JetBrains.Annotations;
 // using Newtonsoft.Json.Linq;
 using NMica.Utils.IO;
+using Serilog;
 
 namespace CloudFoundry.Buildpack.V2;
 
 [PublicAPI]
 public partial class PluginInjectorBuildpack : SupplyBuildpack
 {
-	protected override void Apply(BuildContext context)
+	public override DetectResult Detect(DetectContext context) => DetectResult.Fail();
+
+	protected override BuildResult Apply(BuildContext context)
 	{
+		var result = new BuildResult();
 		InstallNugetCache(context);
 		InstallHttpModules(context);
-		InstallHostStartups(context);
-
+		InstallHostStartups(result, context);
+		return result;
 	}
 
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Only strings are used with JsonArray.Add method")]
-	public override void PreStartup(PreStartupContext context)
+	public override PreStartResult PreStartup(PreStartupContext context)
 	{
-		Console.WriteLine($"Running {GetType().Name} prestart hook...");
-		    //Console.WriteLine(new StackTrace().ToString());
+		var result = new PreStartResult();
+		Logger.Debug("Running {BuildpackClassName} prestart hook...", GetType().Name);
 	    // if it was compiled from source, the app ends up in final buildpacks deps dir under dotnet_publish subfolder. in all other cases it's in it's regular spot: /home/vcap/app
 	    var homeDir = (AbsolutePath)Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 	    if (IsLinux)
@@ -39,11 +43,11 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 	    if (!Directory.Exists(publishDir))
 	        publishDir = homeDir / "app";
 	    
-	    Console.WriteLine($"Using app folder {publishDir}");
+	    Logger.Debug("Using app folder {PublishDir}", publishDir);
 
 	    foreach (var runtimeConfigFile in Directory.EnumerateFiles(publishDir, "*.runtimeconfig.json"))
 	    {
-		    Console.WriteLine($"Adjusting {runtimeConfigFile} to probe nuget folder when resolving dependencies");
+		    Logger.Debug("Adjusting {RuntimeConfigFile} to probe nuget folder when resolving dependencies", runtimeConfigFile);
 
 	        // add path to nuget folder as part of "additionalProbingPaths" in runtimeconfig.json so extra assemblies we introduce from plugins can be resolved from there
 	        var runtimeConfig = JsonNode.Parse(File.ReadAllText(runtimeConfigFile))!;
@@ -75,7 +79,7 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 
 	        foreach (var additionalDepFile in additionalDeps)
 	        {
-		        Console.WriteLine($"Adjusting {appDepsFile} to to include dependencies from {additionalDepFile}");
+		        Logger.Debug("Adjusting {AppDepsFile} to to include dependencies from {AdditionalDepFile}", appDepsFile, additionalDepFile);
 	            JsonNode additionalDepJson = JsonNode.Parse(File.ReadAllText(additionalDepFile))!;
 	            // if our additional deps targets something like .NETCoreApp,Version=v8.0 when primary app is targeting .NETCoreApp,Version=v8.0/linux-x64,
 	            // make the secondary deps RID specific as part of the merge
@@ -104,10 +108,11 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 			File.WriteAllText(appDepsFile, mergedDeps.ToString());
 		}
 
-		
+	    return result;
+
 	}
 
-	void InstallHostStartups(BuildContext context)
+	void InstallHostStartups(BuildResult buildResult, BuildContext context)
 	{
 		var homeDir = (AbsolutePath)Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 		var hostStartupPath = context.BuildpackRoot.LibDirectory.CurrentAbsolutePath / ".hostStartup";
@@ -123,16 +128,16 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 		if (hostStartupAssemblies.Count == 0)
 			return;
 		
-		EnvironmentalVariables["ASPNETCORE_HOSTINGSTARTUPASSEMBLIES"] = string.Join(";", hostStartupAssemblies);
+		buildResult.EnvironmentalVariables.Set("ASPNETCORE_HOSTINGSTARTUPASSEMBLIES", string.Join(";", hostStartupAssemblies));
 
 		var depsFiles = Directory.EnumerateFiles(context.BuildpackRoot.LibDirectory.CurrentAbsolutePath, "*.deps.json").Select(x => (AbsolutePath)x).ToList();
 		foreach (var file in depsFiles)
 		{
 			FileSystemTasks.CopyFile(file, context.MyDependenciesDirectory.CurrentAbsolutePath / file.Name);
 		}
-		EnvironmentalVariables["DOTNET_ADDITIONAL_DEPS"] = string.Join(";", depsFiles.Select(x => homeDir / "deps" / context.BuildpackIndex.ToString() / x.Name));
+		buildResult.EnvironmentalVariables.Set("DOTNET_ADDITIONAL_DEPS", string.Join(";", depsFiles.Select(x => homeDir / "deps" / context.BuildpackIndex.ToString() / x.Name)));
 		
-
+		
 	}
 	void InstallHttpModules(BuildContext context)
 	{
@@ -145,7 +150,7 @@ public partial class PluginInjectorBuildpack : SupplyBuildpack
 		foreach (var httpModule in httpModules)
 		{
 			webConfig.AddHttpModule(httpModule);
-			Console.WriteLine($"Registered {httpModule} HTTP module into web.config");
+			Logger.Information("Registered {HttpModule} HTTP module into web.config", httpModule);
 		}
 	}
 	void InstallNugetCache(BuildContext context)

@@ -1,3 +1,4 @@
+using CloudFoundry.Buildpack.V2.MyBuildpack;
 using CloudFoundry.Buildpack.V2.Testing;
 using FluentAssertions;
 using NMica.Utils.IO;
@@ -7,13 +8,35 @@ namespace CloudFoundry.Buildpack.V2.Lib.Tests;
 
 public class LibraryTests
 {
-    [Fact]
-    public void WebConfigAssemblyBindingTest()
+    readonly ITestOutputHelper _output;
+
+    public LibraryTests(ITestOutputHelper output)
     {
-        var webConfig = new WebConfig(@"C:\projects\cf-buildpack-template\tests\MyBuildpack.Tests\bin\HttpModule\net8.0\testrun-2024-07-30T09.44.19.4747388-04.00\WindowsTests.HttpModuleInjectionTest\droplet\app\Web.config");
-        webConfig.CreateAssemblyBindings((AbsolutePath)@"C:\projects\cf-buildpack-template\artifacts\latest\win-x64\buildpack\lib\.nuget\packages");
-        webConfig.SaveAs(@"C:\projects\cf-buildpack-template\tests\MyBuildpack.Tests\bin\HttpModule\net8.0\testrun-2024-07-30T09.44.19.4747388-04.00\WindowsTests.HttpModuleInjectionTest\droplet\app\Web2.config");
+        _output = output;
     }
+
+    // [Fact]
+    // public void EnsureDependencies()
+    // {
+    //     MyBuildpackDependencies.DotnetSdk.Name.Should().Be("dotnet-sdk");
+    //     MyBuildpackDependencies.DotnetSdk.Versions.Should().NotBeEmpty();
+    //     MyBuildpackDependencies.DotnetSdk.Versions.First().Parts.Should().BeEmpty();
+    //     
+    //     MyBuildpackDependencies.DotnetRuntime.Name.Should().Be("dotnet-runtime");
+    //     var runtimeVersion = MyBuildpackDependencies.DotnetRuntime.SelectVersion(SemVersionRange.Inclusive(new SemVersion(8), new SemVersion(9)));
+    //     runtimeVersion.Name.Should().Be("dotnet-runtime");
+    //     runtimeVersion.Version.ToString().Should().Be("8.0.7");
+    //     runtimeVersion.Parts.Should().NotBeEmpty();
+    //     var slice = runtimeVersion.Parts.First();
+    //     slice.Name.Should().Be(MyBuildpackDependencies.DotnetSdk.Name);
+    //     slice.Version.ToString().Should().Be("8.0.107");
+    //     // slice.Include.Should().BeEquivalentTo(["/host/**", "/shared/Microsoft.NETCore.App/{partof-version}", "/dotnet"]);
+    //     slice.Folder = (VariablePath)@"C:\projects\cf-buildpack-template\artifacts\sdk";
+    //     foreach (var (absolutePath, relativePath) in runtimeVersion.SelectFiles())
+    //     {
+    //         _output.WriteLine(absolutePath);
+    //     }
+    // }
 
 
     [Fact]
@@ -38,7 +61,7 @@ public class LibraryTests
         {
             FileSystemTasks.Touch(file);
         }
-        var compositeDependency = new DependencyVersion("composite", new SemVersion(3,0,0), new DependencyVersion[]{part1, part2});
+        var compositeDependency = new DependencyVersion("composite", new SemVersion(3,0,0), parts: [part1, part2]);
         var files = compositeDependency.SelectFiles().Select(x => x.RelativePath.ToUnixRelativePath().ToString());
         files.Should().BeEquivalentTo(new[]
         {

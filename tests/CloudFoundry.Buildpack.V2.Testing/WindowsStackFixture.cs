@@ -18,14 +18,15 @@ public class WindowsStackFixture : ContainersPlatformFixture
     }
 
     public override CloudFoundryStack Stack => CloudFoundryStack.Windows;
-    internal override async Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, CancellationToken cancellationToken = default)
+    internal override async Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, bool unpack = true, CancellationToken cancellationToken = default)
     {
         var remoteDropletTar = RemoteTemp / "droplet" / "droplet.tar";
+        var command = unpack ? $"tar -xf {remoteDropletTar} -C {(RemoteHome / "droplet").AsWindowsPath()}" : $"cp {remoteDropletTar} {(RemoteHome / "droplet/droplet.tar").AsWindowsPath()}";
         var container = new ContainerBuilder()
             .WithImage(KnownImages.Windows2016fs)
             .WithVolumeMount(dropletVolume, RemoteTemp / "droplet")
             .WithBindMount(localPath,  (RemoteHome / "droplet").AsWindowsPath())
-            .WithCommand("powershell", "-Command", $"tar -xf {remoteDropletTar} -C {(RemoteHome / "droplet").AsWindowsPath()}")
+            .WithCommand("powershell", "-Command", command)
             .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(TestContext.TestOutputStream,TestContext.TestOutputStream))
             .Build();
 
@@ -130,10 +131,11 @@ public class WindowsStackFixture : ContainersPlatformFixture
     protected override IWaitForContainerOS WaitStrategy => Wait.ForWindowsContainer();
     protected override string ContainerImage => KnownImages.Windows2016fsTest;
 
-    protected override Func<ContainerBuilder, ContainerBuilder> StagingContainerConfigurer => _ => _
-        .WithResourceMapping(new FileInfo(DirectoryHelper.CurrentAssemblyFolder / StageScriptName), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions);
+    protected override Func<ContainerBuilder, StageContext, ContainerBuilder> StagingContainerConfigurer => (builder, context) => builder
+        .WithResourceMapping(new FileInfo(DirectoryHelper.CurrentAssemblyFolder / StageScriptName), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions)
+        .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions);
 
-    protected override Func<ContainerBuilder, ContainerBuilder> LaunchingContainerConfigurer => _ => _
+    protected override Func<ContainerBuilder, LaunchContext, ContainerBuilder> LaunchingContainerConfigurer => (builder, _) => builder
         .WithResourceMapping(new FileInfo(DirectoryHelper.CurrentAssemblyFolder / LaunchScriptName), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions);
     
     List<IContainer> _containers = new();

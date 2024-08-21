@@ -33,9 +33,7 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
         var responseBody = await result.Content.ReadAsStringAsync();
         responseBody.Should().Be("Hello world");
     }
-#else
-    
-    
+#elif (IsSupplyBuildpack)    
     [Fact]
     public async Task PushStaticFile()
     {
@@ -62,7 +60,43 @@ public class LinuxTests(ITestOutputHelper output, CfLinuxfs4StackFixture fixture
         responseContent.Should().Be("test");
         
     }
-    
+#endif
+        
+#if(IsFinalBuildpack)
+    [Fact]
+    public async Task RunSelfContained()
+    {
+        var appDir = RootDirectory / "tests" / "fixtures" / "dotnetapp";
+        var publishDir = appDir / "bin" / "Release" / "net8.0" / "linux-x64" / "publish";
+        if (!publishDir.Exists())
+        {
+            ProcessTasks.StartProcess("dotnet", "publish -r linux-x64 --self-contained", 
+                    workingDirectory: appDir,
+                    logInvocation: true,
+                    logOutput: true, logger: (type, s) => _output.WriteLine(s))
+                .WaitForExit();
+        }
+        var stageContext = _fixture.CreateStagingContext(publishDir);
+        // stageContext.SkipDetect = true;
+        stageContext.Buildpacks.Add( RootDirectory / "artifacts" / "latest" / "linux-x64" / "buildpack.zip");
+        var stageResults = await fixture.Stage(stageContext);
+        using var droplet = await stageResults.GetDroplet();
+        // assert staging results
+        AbsolutePath contribFile = droplet.ApplicationDirectory / "contrib.txt";
+        contribFile.Should().BeExistingFile();
+        File.ReadAllText(contribFile).Should().Be("test");
+        
+        // launch the droplet
+        var launchContext = stageResults.ToLaunchContext();
+        var launchResult = await fixture.Launch(launchContext);
+        // assert how app behaves in running state
+        var result = await launchResult.HttpClient.GetAsync("/");
+        var responseContent = await result.Content.ReadAsStringAsync();
+        result.IsSuccessStatusCode.Should().BeTrue(responseContent);
+        responseContent.Should().Be("Hello World!");
+    }
+#endif
+#if(false)
     [Fact]
     public async Task PushDotnetCoreApp()
     {

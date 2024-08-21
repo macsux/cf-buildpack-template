@@ -4,7 +4,8 @@
 )
 $buildpackList = $args
 $homeDir = "c:\users\vcap"
-$tmp = "$homeDir\appdata\local\temp" 
+$tmp = "$homeDir\appdata\local\temp"
+
 function Get-BuildpackDirectory {
     param(
         $buildpackName

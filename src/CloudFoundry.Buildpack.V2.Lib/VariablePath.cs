@@ -6,10 +6,11 @@ using NMica.Utils.IO;
 
 namespace CloudFoundry.Buildpack.V2;
 
+[TypeConverter(typeof(TypeConverter))]
 public class VariablePath
 {
-    private readonly string _path;
-    private readonly char? _separator;
+    protected readonly string _path;
+    protected readonly char? _separator;
 
     public class TypeConverter : System.ComponentModel.TypeConverter
     {
@@ -53,7 +54,7 @@ public class VariablePath
         return new VariablePath(NormalizePath(path));
     }
 
-    public static implicit operator string(VariablePath path)
+    public static explicit operator string(VariablePath path)
     {
         return path._path;
     }
@@ -61,7 +62,7 @@ public class VariablePath
     public static VariablePath operator /(VariablePath left, string right)
     {
         var separator = left.NotNull("left != null")._separator;
-        return new VariablePath(NormalizePath(Combine(left, (RelativePath) right, separator), separator), separator);
+        return new VariablePath(NormalizePath(Combine(left.ToString(), (RelativePath) right, separator), separator), separator);
     }
 
     public override string ToString()

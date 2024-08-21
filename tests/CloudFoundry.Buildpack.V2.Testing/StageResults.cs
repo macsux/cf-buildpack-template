@@ -41,7 +41,7 @@ public class StageResults : IDisposable
     public async Task<Droplet> GetDroplet(CancellationToken cancellationToken = default) => await GetDroplet(DropletDirectory, cancellationToken);
     public async Task<Droplet> GetDroplet(AbsolutePath localPath, CancellationToken cancellationToken = default)
     {
-        var droplet = await _fixture.GetDroplet(DropletVolume, localPath, cancellationToken);
+        var droplet = await _fixture.GetDroplet(DropletVolume, localPath, true, cancellationToken);
         TestContext.TestOutputHelper?.WriteLine($"Droplet downloaded to {localPath}");
         return droplet;
     }

@@ -33,9 +33,9 @@ public class FolderInstaller(BuildContext context) : Installer(context)
         }
 
         var allFiles = package.SelectFiles();
-        foreach (var (absolutePath, relativePath) in allFiles)
+        foreach (var (sourceFile, relativePath) in allFiles)
         {
-            FileSystemTasks.CopyFile(absolutePath, targetFolder / relativePath);
+            FileSystemTasks.CopyFile(sourceFile, (targetFolder / relativePath).CurrentAbsolutePath);
         }
         // bool ExcludeFile(FileInfo info) => ExcludePath((AbsolutePath)info.FullName);
         // bool ExcludeDirectory(DirectoryInfo info) => ExcludePath((AbsolutePath)info.FullName);

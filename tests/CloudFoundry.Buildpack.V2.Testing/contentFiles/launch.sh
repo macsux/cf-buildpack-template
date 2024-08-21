@@ -17,6 +17,7 @@ done
 #fi
 
 startCommand=$(cat /home/vcap/staging_info.yml | jq .start_command)
+
 launcher="$tmp/lifecycle/launcher ./app $startCommand ''"
 #echo $ASPNETCORE_URLS
 #echo $DOTNET_ROOT

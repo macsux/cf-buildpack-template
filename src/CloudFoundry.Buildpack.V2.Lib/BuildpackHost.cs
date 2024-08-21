@@ -1,8 +1,13 @@
 ﻿using System.CommandLine;
 using System.Diagnostics;
 using CloudFoundry.Buildpack.V2.Commands;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NMica.Utils;
 using NMica.Utils.IO;
+using Serilog;
+using Serilog.Events;
+
 #pragma warning disable CS0162 // Unreachable code detected
 
 namespace CloudFoundry.Buildpack.V2;
@@ -14,6 +19,8 @@ public class BuildpackHost
     private BuildpackHost(BuildpackBase buildpack)
     {
         _buildpack = buildpack;
+        _buildpack.SpecVersionMode = Environment.GetEnvironmentVariable("CNB_BUILD_PLAN_PATH") != null ? SpecVersionMode.V3 : SpecVersionMode.V2;
+        
     }
     public static BuildpackHost Create<T>() where T : BuildpackBase, new()
     {
@@ -21,26 +28,22 @@ public class BuildpackHost
     }
     public int Run()
     {
-        
         var args = EnvironmentHelper.GetCommandLineArgsNative();
-        // //Console.WriteLine(string.Join(" ", args));
-        // // var args = Environment.GetCommandLineArgs().ToList().ToArray();
-        // if (EnvironmentInfo.IsWin && args[0].StartsWith(@"\"))
-        // {
-        //     args[0] = $"c:{args[0]}";
-        // }
-        // if(!Path.IsPathRooted(args[0]))
-        // {
-        //     args[0] = (AbsolutePath)Directory.GetCurrentDirectory() / args[0];
-        // }
-        // // Console.WriteLine($"Entry:{Assembly.GetEntryAssembly()?.Location}");
-        // // Console.WriteLine("------");
-        //
-        // // return 0;
-        // var entrypointExecutable = (AbsolutePath)args[0];
+        
         var hookName = EnvironmentHelper.EntrypointExecutable.NameWithoutExtension; // try to get hook name from entrypoint executable name (normal execution conditions)
+        if (hookName != "release") // can't write anything to console during release phase as stdout is used to communicate startup command
+        {
+            var logLevel = Environment.GetEnvironmentVariable("BP_LOG_LEVEL")?.ToUpper() switch
+            {
+                "INFO" => LogEventLevel.Information,
+                "DEBUG" => LogEventLevel.Debug,
+                _ => LogEventLevel.Information
+            };
+            Log.Logger = new LoggerConfiguration().WriteTo.Console(logLevel, outputTemplate: "{Message:l}{NewLine}").CreateLogger();
+            _buildpack.Logger = Log.Logger;
+        }
+
         args = args.Skip(1).ToArray(); // going forward, remove entrypoint as the first arg
-        // Console.Error.WriteLine($"HookName: {hookName}");
         var appDirectory = new Argument<string>(
             name: "buildPath",
             description: "Directory path to the application");
@@ -60,6 +63,21 @@ public class BuildpackHost
         Environment.SetEnvironmentVariable(EnvironmentHelper.BuildpackRootEnvironmentalVariableName, EnvironmentHelper.EntrypointExecutable.Parent.Parent);
         
         int returnCode = 0;
+
+        void SetBuildplan(BuildContext context)
+        {
+            // there's no mechanism to pass metadata between detect and build phases in v2 - we're just gonna call detect again
+            if (_buildpack.SpecVersionMode == SpecVersionMode.V2)
+            {
+                var detectResult = _buildpack.Detect(new DetectContext { BuildDirectory = context.BuildDirectory });
+                if (detectResult.Buildplans.Count > 1)
+                {
+                    throw new Exception("Multiple buildplans not supported in V2 mode");
+                }
+                context.Buildplan = detectResult.Buildplans.SingleOrDefault() ?? new();
+            }
+        }
+
         Command CreateSupplyCommand(bool rooted)
         {
             var command = rooted ? new RootCommand() : new Command(Lifecycle.Supply, "Provides dependencies for an app");
@@ -67,21 +85,31 @@ public class BuildpackHost
             command.AddArgument(cacheDirectory);
             command.AddArgument(dependenciesDirectory);
             command.AddArgument(buildpackIndex);
-            command.SetHandler(context => _buildpack.Supply(context), new BuildContextBinder(appDirectory, cacheDirectory, dependenciesDirectory, buildpackIndex, hookName));
+            command.SetHandler(context =>
+            {
+                SetBuildplan(context);
+                _buildpack.Supply(context);
+            }, new BuildContextBinder(appDirectory, cacheDirectory, dependenciesDirectory, buildpackIndex, hookName));
             return command;
         }
-        
         Command CreateDetectCommand(bool rooted)
         {
             var command = rooted ? new RootCommand() : new Command(Lifecycle.Detect, "Determines whether or not to apply the buildpack to an app");
             command.AddArgument(appDirectory);
             command.SetHandler(context =>
             {
-                returnCode = _buildpack.Detect(context) ? 0 : 1;
+                // for v2, only one buildpack can participate in detection. supply buildpacks MUST fail detection so they don't conflict with 
+                // final buildpacks when installed in the platform (as they can't be used as standalone mode)
+                if (_buildpack.SpecVersionMode == SpecVersionMode.V2 && _buildpack is SupplyBuildpack)
+                {
+                    returnCode = (int)DetectResultCode.Fail;
+                    return;
+                }
+                var result = _buildpack.Detect(context);
+                returnCode = result.ResultCode;
             }, new DetectContextBinder(appDirectory));
             return command;
         }
-        
         Command CreateFinalizeCommand(bool rooted)
         {
             var command = rooted ? new RootCommand() : new Command(Lifecycle.Finalize, "Finalizes creation of the container and prepares the app for launch");
@@ -90,7 +118,11 @@ public class BuildpackHost
             command.AddArgument(dependenciesDirectory);
             command.AddArgument(buildpackIndex);
             command.AddArgument(profiled);
-            command.SetHandler(context => _buildpack.Finalize(context), new BuildContextBinder(appDirectory, cacheDirectory, dependenciesDirectory, buildpackIndex, hookName));
+            command.SetHandler(context =>
+            {
+                SetBuildplan(context);
+                _buildpack.Finalize(context);
+            }, new BuildContextBinder(appDirectory, cacheDirectory, dependenciesDirectory, buildpackIndex, hookName));
             return command;
         }
         
@@ -107,6 +139,7 @@ public class BuildpackHost
             var command = rooted ? new RootCommand() : new Command(Lifecycle.PreStartup, "Executes buildpack code right before application starts");
             command.AddArgument(buildpackIndex);
             command.SetHandler(context => _buildpack.PreStartup(context), new PreStartContextBinder(buildpackIndex));
+            
             return command;
         }
         

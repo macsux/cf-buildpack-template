@@ -14,7 +14,42 @@ namespace CloudFoundry.Buildpack.V2.Analyzers;
 [Generator]
 public class DependencyGenerator : BuildpackExtensionGenerator
 {
+    private List<Dependency> SortForDeclaration(ICollection<Dependency> list)
+    {
+        var queue = new Queue<Dependency>(list);
+        var sorted = new List<Dependency>();
+    
+        Dependency? first = null;
+    
+        var processed = new HashSet<(string,string)>();
+        while(queue.Count > 0)
+        {
+            var item = queue.Dequeue();
+            item.Composition ??= new List<Dependency>();
+            if(item == first && queue.Count > 0)
+            {
+            
+                throw new Exception($"Circular reference detected");
+            }
+            if(item.Composition.Count > 0 && item.Composition.Select(x => (x.Name, x.Version)).Except(processed).Any())
+            {
+                if(first == null)
+                {
+                    first = item;
+                }
+                queue.Enqueue(item);
+                continue;
+            }
+            sorted.Add(item);
+            processed.Add((item.Name, item.Version));
+            first = null;
+        
+        }
 
+        return sorted;
+    }
+
+    string ToCamelCase(string input) => $"{input[0].ToString().ToLower()}{input.Substring(1, input.Length - 1)}";
     public override void Execute(GeneratorExecutionContext context)
     {
         try
@@ -43,8 +78,11 @@ public class DependencyGenerator : BuildpackExtensionGenerator
             manifest.Dependencies ??= Array.Empty<Dependency>();
             // buildpackSourceBuilder.AppendLine();
             var initBlock = new StringBuilder();
-            List<string> dependencyProperties = new();
-            foreach (var namedDependency in manifest.Dependencies.GroupBy(x => x.Name))
+            Dictionary<string,string> dependencyProperties = new();
+
+            Dictionary<(string, string), string> versionPackageToLocalVariableMap = new();
+            var dependencies = SortForDeclaration(manifest.Dependencies);
+            foreach (var namedDependency in dependencies.GroupBy(x => x.Name))
             {
                 var dependencyName = namedDependency.Key;
                 var parts = Regex.Split(dependencyName, "[-\\._]")
@@ -52,21 +90,41 @@ public class DependencyGenerator : BuildpackExtensionGenerator
                     .ToList();
 
                 var pascalCaseName = string.Join("", parts);
-
-                initBlock.AppendLine($"        {pascalCaseName} = new DependencyPackage(\"{dependencyName}\");");
-                dependencyProperties.Add(pascalCaseName);
+                var fieldName = $"_{ToCamelCase(pascalCaseName)}";
+                
+                initBlock.AppendLine($"        {fieldName} = new DependencyPackage(\"{dependencyName}\");");
+                dependencyProperties.Add(pascalCaseName, fieldName);
                 foreach (var versionedDependency in namedDependency)
                 {
+                    var versionVariableName = $"{ToCamelCase(pascalCaseName)}_{versionedDependency.Version.Replace(".","_").Replace("-","_")}";
+                    
                     versionedDependency.Composition ??= [];
                     if (versionedDependency.Composition.Count > 0)
                     {
-                        initBlock.AppendLine($"        {pascalCaseName}.AddVersion(SemVersion.Parse(\"{versionedDependency.Version}\", SemVersionStyles.Any), new DependencyVersion[]{{");
+                        var slices = new List<string>();
+                        foreach (var part in versionedDependency.Composition)
+                        {
+                            var partVariable = versionPackageToLocalVariableMap[(part.Name, part.Version)];
+                            string include = "";
+                            string exclude = "";
+                            if(part.Include?.Any() ?? false)
+                                include = $"include: [{string.Join(",", part.Include.Select(x => $"\"{x}\""))}]";
+                            if(part.Exclude?.Any() ?? false)
+                                exclude = $"exclude: [{string.Join(",", part.Exclude.Select(x => $"\"{x}\""))}]";
+                            var sliceParameters = string.Join(",", [include, exclude]);
+                            slices.Add($"           {partVariable}.Slice({sliceParameters})");
+                        }
+                        initBlock.AppendLine($"        var {versionVariableName} = {fieldName}.AddVersion(SemVersion.Parse(\"{versionedDependency.Version}\", SemVersionStyles.Any), new DependencyVersion[]");
+                        initBlock.AppendLine("        {");
+                        initBlock.AppendLine(string.Join(",\n", slices));
+                        initBlock.AppendLine("        });");
                     }
                     else
                     {
-                        initBlock.AppendLine($"        {pascalCaseName}.AddVersion(SemVersion.Parse(\"{versionedDependency.Version}\", SemVersionStyles.Any), \"{versionedDependency.Uri}\");");
+                        initBlock.AppendLine($"        var {versionVariableName} = {fieldName}.AddVersion(SemVersion.Parse(\"{versionedDependency.Version}\", SemVersionStyles.Any), \"{versionedDependency.Uri}\");");
 
                     }
+                    versionPackageToLocalVariableMap.Add((dependencyName, versionedDependency.Version), versionVariableName);
                     // sourceBuilder.AppendLine($"\tpublic static Dependency {pascalCaseName}_v{versionedDependency.Version.Replace(".", "_")} {{ get; }} = new Dependency(\"{versionedDependency.Name}\", \"{versionedDependency.Version}\");");
                 }
 
@@ -74,19 +132,25 @@ public class DependencyGenerator : BuildpackExtensionGenerator
                 // sourceBuilder.AppendLine($"\tpublic static Dependency {pascalCaseName} {{ get; }} = new Dependency(\"{namedDependency.Key}\", \"{latest.Version}\");");
             }
 
-            initBlock.AppendLine($"        AllDependencies = new DependencyPackage[]{{ {string.Join(",", dependencyProperties)} }};");
-            var propsDeclarationBlock = string.Join("\n", dependencyProperties.Select(name => $"    public static DependencyPackage {name} {{ get; }}"));
+            initBlock.AppendLine($"        AllDependencies = new DependencyPackage[]{{ {string.Join(",", dependencyProperties.Values)} }};");
+            var propsDeclarationBlock = string.Join("\n", dependencyProperties.Select(kv => $$"""
+                                                                                              private static DependencyPackage {{kv.Value}} = null!;
+                                                                                              public static DependencyPackage {{kv.Key}} { get { Init(); return {{kv.Value}}; } }
+                                                                                              """));
             var classSrc = $$"""
                              using Semver;
                              namespace {{buildpackClass.Model.ContainingNamespace}};
                              public static partial class {{buildpackName}}Dependencies
                              {
-                                 static {{buildpackName}}Dependencies()
+                                private static bool _isInit = false;
+                                 private static void Init()
                                  {
+                                    if(_isInit) return;
                              {{initBlock}}
+                                    _isInit = true;
                                  }
                              
-                                 public static IEnumerable<DependencyPackage> AllDependencies { get; }
+                                 public static IEnumerable<DependencyPackage> AllDependencies { get; private set; }
                              {{propsDeclarationBlock}}
 
                              }

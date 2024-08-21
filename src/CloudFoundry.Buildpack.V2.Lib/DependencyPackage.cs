@@ -33,16 +33,17 @@ public class DependencyPackage
         Name = name;
     }
 
-    public DependencyPackage AddVersion(SemVersion version, IEnumerable<DependencyVersion> parts)
+    public DependencyVersion AddVersion(SemVersion version, IEnumerable<DependencyVersion> parts)
     {
-        var dependencyVersion = new DependencyVersion(Name, version, parts);
+        var dependencyVersion = new DependencyVersion(Name, version, parts: parts);
         _versions.Add(dependencyVersion);
-        return this;
+        return dependencyVersion;
     }
-    public void AddVersion(SemVersion version, string uri)
+    public DependencyVersion AddVersion(SemVersion version, string uri)
     {
         var dependencyVersion = new DependencyVersion(Name, version, new Uri(uri));
         _versions.Add(dependencyVersion);
+        return dependencyVersion;
     }
     public bool TrySelectVersion(SemVersionRange versionRange, out DependencyVersion? version)
     {
@@ -56,6 +57,7 @@ public class DependencyPackage
         if (!TrySelectVersion(versionRange, out var selectedVersion))
             throw new InvalidOperationException($"None of the package versions for dependency {Name} satisfy version selection criteria {versionRange}");
         return selectedVersion!;
-
     }
+
+    public IReadOnlyList<DependencyVersion> Versions => _versions.AsReadOnly();
 }

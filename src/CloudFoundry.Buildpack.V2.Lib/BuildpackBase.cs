@@ -3,33 +3,19 @@ using System.Text;
 using JetBrains.Annotations;
 using NMica.Utils.IO;
 using Semver;
+using Serilog;
 
 namespace CloudFoundry.Buildpack.V2;
 
 [PublicAPI]
 public abstract class BuildpackBase
 {
-    // protected void Initialize()
-    // {
-    //     void AddDependency(string name, params (string Version, string Uri)[] versions)
-    //     {
-    //         var dependency = new DependencyPackage(name);
-    //         foreach (var (version, uri) in versions)
-    //         {
-    //             dependency.AddVersion(version, uri);
-    //         }
-    //         BuildpackRoot.Instance.Dependencies.Add(name, dependency);
-    //     }
-    //     AddDependency("", ("",""));
-    //     var dependency = new DependencyPackage("", new DependencyPackage(name);
-    //     
-    // }
-    
-    
+    public ILogger Logger { get; internal set; } = Serilog.Log.Logger;
+    internal SpecVersionMode SpecVersionMode { get; set; } = SpecVersionMode.V2; 
     /// <summary>
     /// Dictionary of environmental variables to be set at runtime before the app starts
     /// </summary>
-    public Dictionary<string,string> EnvironmentalVariables { get; } = new();
+    // public Dictionary<string,string> EnvironmentalVariables { get; } = new();
     protected bool IsLinux => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
     protected abstract string ImplementingClassName { get; }
     protected virtual string? BuildpackVersion { get; }
@@ -38,48 +24,49 @@ public abstract class BuildpackBase
     /// Determines if the buildpack is compatible and should be applied to the application being staged.
     /// </summary>
     /// <returns>True if buildpack should be applied, otherwise false</returns>
-    public abstract bool Detect(DetectContext context);
-    public abstract void Supply(BuildContext context);
-    public abstract void Finalize(BuildContext context);
+    public abstract DetectResult Detect(DetectContext context);
+    public abstract BuildResult Supply(BuildContext context);
+    public abstract BuildResult Finalize(BuildContext context);
     public abstract void Release(ReleaseContext context);
 
     protected virtual void PrintHeader()
     {
         var versionInfo = BuildpackVersion != null ? $"v.{BuildpackVersion}" : "";
-        Console.WriteLine($"===Applying {ImplementingClassName} {versionInfo}===");
+        Log.Information("===Applying {BuildpackName} {BuildpackVersion}===",ImplementingClassName, versionInfo);
     }
 
     /// <summary>
     /// Code that will execute during the run stage before the app is started
     /// </summary>
-    public virtual void PreStartup(PreStartupContext context)
+    public virtual PreStartResult PreStartup(PreStartupContext context)
     {
+        return new PreStartResult();
     }
 
     /// <summary>
     /// Logic to apply when buildpack is ran.
     /// Note that for <see cref="SupplyBuildpack"/> this will correspond to "bin/supply" lifecycle event, while for <see cref="FinalBuildpack"/> it will be invoked on "bin/finalize"
     /// </summary>
-    protected abstract void Apply(BuildContext context);
+    protected abstract BuildResult Apply(BuildContext context);
 
 
     internal void DoPreStartup(PreStartupContext context)
     {
-        PreStartup(context);
+        var result = PreStartup(context);
         var profiled = context.AppDirectory / ".profile.d";
-        InstallStartupEnvVars(profiled, context.BuildpackIndex, true);
+        InstallStartupEnvVars(result.EnvironmentalVariables, profiled, context.BuildpackIndex, true);
     }
     protected abstract bool IsPreStartOverridden { get; }
-    protected void DoApply(BuildContext context)
+    protected BuildResult DoApply(BuildContext context)
     {
         PrintHeader();
-        Apply(context);
+        var result = Apply(context);
         
         // var buildpackDepsDir = Path.Combine(depsPath, index.ToString());
-        FileSystemTasks.EnsureExistingDirectory(context.MyDependenciesDirectory);
+        FileSystemTasks.EnsureExistingDirectory(context.MyDependenciesDirectory.CurrentAbsolutePath);
         var profiled = context.BuildDirectory / ".profile.d";
-        FileSystemTasks.EnsureExistingDirectory(profiled);
-        InstallStartupEnvVars(profiled, context.BuildpackIndex, false);
+        FileSystemTasks.EnsureExistingDirectory(profiled.CurrentAbsolutePath);
+        InstallStartupEnvVars(result.EnvironmentalVariables, profiled, context.BuildpackIndex, false);
         if (IsPreStartOverridden) 
         {
             // copy buildpack to deps dir so we can invoke it as part of startup
@@ -109,7 +96,8 @@ public abstract class BuildpackBase
             }
             GetEnvScriptFile(profiled, context.BuildpackIndex, true); // causes empty env file to be created so it can (potentially) be populated with vars during prestart hook
         }
-            
+
+        return result;
     }
     private AbsolutePath GetEnvScriptFile(VariablePath profiled, int index, bool isPreStart)
     {
@@ -121,20 +109,33 @@ public abstract class BuildpackBase
             File.WriteAllText(envScriptName, string.Empty);
         return envScriptName;
     }
-    protected void InstallStartupEnvVars(VariablePath profiled, int index, bool isPreStart)
+    protected void InstallStartupEnvVars(Dictionary<string, ValueAction> environmentalVariables, VariablePath profiled, int index, bool isPreStart)
     {
         var envScriptName = GetEnvScriptFile(profiled, index, isPreStart);
             
-        if (EnvironmentalVariables.Any())
+        if (environmentalVariables.Any())
         {
             if (IsLinux)
             {
-                var envVars = EnvironmentalVariables.Aggregate(new StringBuilder(), (sb,x) => sb.Append($"export {x.Key}={Escape(x.Value)}\n"));
+                var envVars = environmentalVariables.Aggregate(new StringBuilder(), (sb,x) =>
+                {
+                    if(x.Value is SetValueAction setValueAction)
+                        return sb.Append($"export {x.Key}={Escape(setValueAction.Value)}\n");
+                    var appendValueAction = (AppendValueAction)x.Value;
+                    return sb.Append($"export {appendValueAction.Key}=${appendValueAction.Key}{appendValueAction.Delimiter}{Escape(appendValueAction.Value)}\n");
+
+                });
                 File.WriteAllText(envScriptName, $"#!/bin/bash\n{envVars}");
             }
             else
             {
-                var envVars = EnvironmentalVariables.Aggregate(new StringBuilder(), (sb,x) => sb.Append($"SET {x.Key}={x.Value}\r\n"));
+                var envVars = environmentalVariables.Aggregate(new StringBuilder(), (sb,x) =>
+                {
+                    if(x.Value is SetValueAction setValueAction)
+                        return sb.Append($"SET {setValueAction.Key}={setValueAction.Value}\r\n");
+                    var appendValueAction = (AppendValueAction)x.Value;
+                    return sb.Append($"SET {appendValueAction.Key}=%{appendValueAction.Key}%{appendValueAction.Delimiter}{Escape(appendValueAction.Value)}\r\n");
+                });
                 File.WriteAllText(envScriptName,envVars.ToString());
             }
         }

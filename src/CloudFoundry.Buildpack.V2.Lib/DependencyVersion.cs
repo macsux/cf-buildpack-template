@@ -14,16 +14,17 @@ public class DependencyVersion
     static string[] _wildcardGlob = ["**"];
     internal static string ToMd5Hash(string name) => BitConverter.ToString(_md5.ComputeHash(Encoding.ASCII.GetBytes(name))).ToLower().Replace("-", "");
 
-    internal DependencyVersion(string name, SemVersion version, IEnumerable<DependencyVersion> parts, IEnumerable<string>? include = null, IEnumerable<string>? exclude = null) 
-        : this(name, version, (Uri?)null, include, exclude)
-    {
-        Parts = parts.ToArray();
-        Folder = null;
-    }
-    internal DependencyVersion(string name, SemVersion version, Uri? uri, IEnumerable<string>? include = null, IEnumerable<string>? exclude = null, VariablePath? dependenciesDirectory = null)
+    // internal DependencyVersion(string name, SemVersion version, IEnumerable<DependencyVersion> parts, IEnumerable<string>? include = null, IEnumerable<string>? exclude = null) 
+    //     : this(name, version, (Uri?)null, include, exclude)
+    // {
+    //     
+    //     Folder = null;
+    // }
+    internal DependencyVersion(string name, SemVersion version, Uri? uri = null, IEnumerable<DependencyVersion>? parts = null, IEnumerable<string>? include = null, IEnumerable<string>? exclude = null, VariablePath? dependenciesDirectory = null)
     {
         var folderName = ToMd5Hash(uri?.ToString() ?? $"{name}-{version}");
-        Folder = (dependenciesDirectory ?? BuildpackRoot.Instance.DependenciesDirectory) / folderName;
+        Parts = parts?.ToArray() ?? [];
+        Folder = !Parts.Any() ? (dependenciesDirectory ?? BuildpackRoot.Instance.DependenciesDirectory) / folderName : null;
         Name = name;
         Version = version;
         Uri = uri;
@@ -31,7 +32,7 @@ public class DependencyVersion
         Exclude = exclude?.ToArray() ?? [];
     }
 
-    public VariablePath? Folder { get; }
+    public VariablePath? Folder { get; internal set; }
     public Uri? Uri { get; }
     public string Name { get; }
     public SemVersion Version { get; }
@@ -39,9 +40,9 @@ public class DependencyVersion
     /// <summary>
     /// Other dependencies which contains fragments from which this dependency version is composed of
     /// </summary>
-    public IReadOnlyCollection<DependencyVersion> Parts { get; } = [];
-    public IReadOnlyCollection<string> Include { get; }
-    public IReadOnlyCollection<string> Exclude { get; }
+    public IReadOnlyCollection<DependencyVersion> Parts { get; private set; } = [];
+    public IReadOnlyCollection<string> Include { get; private set; }
+    public IReadOnlyCollection<string> Exclude { get;  private set;}
 
     public IEnumerable<(AbsolutePath AbsolutePath, RelativePath RelativePath)> SelectFiles() => SelectFiles(null);
     internal IEnumerable<(AbsolutePath AbsolutePath, RelativePath RelativePath)> SelectFiles(string? partOfVersion)
@@ -58,11 +59,12 @@ public class DependencyVersion
         IEnumerable<(AbsolutePath, RelativePath)> ownFiles;
         if (Folder != null)
         {
-            ownFiles = Directory.EnumerateFiles(Folder, "", SearchOption.AllDirectories)
-                .Select(x => "/" + Folder.CurrentAbsolutePath.GetRelativePathTo(x))
+            ownFiles = Directory.EnumerateFiles(Folder.CurrentAbsolutePath, "*", SearchOption.AllDirectories)
+                .Select(x => "/" + Folder.CurrentAbsolutePath.GetRelativePathTo(x).ToUnixRelativePath())
                 .Where(file => include.Any(pattern => Glob.IsMatch(file, pattern)))
                 .Where(file => !exclude.Any(pattern => Glob.IsMatch(file, pattern)))
-                .Select(localPath => (AbsolutePath: Folder.CurrentAbsolutePath / localPath.TrimStart('/'), RelativePath: (RelativePath)localPath.TrimStart('/')));
+                .Select(localPath => (AbsolutePath: Folder.CurrentAbsolutePath / localPath.TrimStart('/'), RelativePath: (RelativePath)localPath.TrimStart('/')))
+                .ToList();
         }
         else
         {
@@ -77,13 +79,22 @@ public class DependencyVersion
             .Union(Parts.SelectMany(x => x.SelectFiles(Version.ToString())));
         return packageFiles;
     }
+
+    public DependencyVersion Slice(IEnumerable<string>? include = null, IEnumerable<string>? exclude = null)
+    {
+        var clone = (DependencyVersion)MemberwiseClone();
+        clone.Parts = [];
+        clone.Include = include?.ToArray() ?? [];
+        clone.Exclude = exclude?.ToArray() ?? [];
+        return clone;
+    }
     
     protected void Extract()
     {
         var sourceDir = Folder?.CurrentAbsolutePath;
         if(Folder == null || !sourceDir.DirectoryExists())
             return;
-        var files = Directory.EnumerateFiles(Folder).ToList();
+        var files = Directory.EnumerateFiles(sourceDir).ToList();
         if (files.Count == 1) // archive - need to unpack
         {
             var archive = files.First();

@@ -11,6 +11,8 @@ tmp=/tmp
 dropletDir=/tmp/droplet
 
 echo $@
+mv $dropletDir/app /home/vcap
+chown -R vcap:vcap /home/vcap/app
 buildpackList=()
 
 skipDetect=false
@@ -34,6 +36,9 @@ for buildpackName in ${buildpackList[@]}; do
 done
 buildpackOrder=$(IFS=,;printf  "%s" "${buildpackList[*]}")
 
+#ls -l /home/vcap/app
+# allow any apps with binaries to be executable. improve logic in future to not do this for all files
+for file in /home/vcap/app/*; do chmod +x $file; done
 
 builder="$tmp/lifecycle/builder"
 if [ "$skipDetect" = true ]; then

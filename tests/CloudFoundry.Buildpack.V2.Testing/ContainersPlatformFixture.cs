@@ -51,7 +51,8 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         {
             ApplicationDirectory = applicationDirectory,
             DropletDirectory = baseDir / "droplet",
-            Stack = Stack
+            Stack = Stack,
+            EnvironmentalVariables =  {{"BP_LOG_LEVEL","DEBUG"}}
         };
 
         return context;
@@ -67,8 +68,8 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
     protected List<string> StageCommand { get; init; } = new();
     protected abstract IWaitForContainerOS WaitStrategy { get; }
     protected abstract string ContainerImage { get; }
-    protected virtual Func<ContainerBuilder, ContainerBuilder> StagingContainerConfigurer => builder => builder;
-    protected virtual Func<ContainerBuilder, ContainerBuilder> LaunchingContainerConfigurer => builder => builder;
+    protected virtual Func<ContainerBuilder, StageContext, ContainerBuilder> StagingContainerConfigurer => (builder, _) => builder;
+    protected virtual Func<ContainerBuilder, LaunchContext, ContainerBuilder> LaunchingContainerConfigurer => (builder, _) => builder;
 
     
     ContainerBuilder CommonContainerConfigurer(ContainerBuilder builder, CloudFoundryContainerContext context)
@@ -112,8 +113,10 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         {
             cancellationToken = new CancellationTokenSource(DefaultLaunchTimeout).Token;
         }
-        
-        var containerBuilder = LaunchingContainerConfigurer(CommonContainerConfigurer(new(), context));
+
+        var containerBuilder = new ContainerBuilder();
+        containerBuilder = CommonContainerConfigurer(containerBuilder, context);
+        containerBuilder = LaunchingContainerConfigurer(containerBuilder, context);
 
         var freeHostPort = NextFreePort();
         var waitStrategy = WaitStrategy.UntilPortIsAvailable(8080);
@@ -151,7 +154,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         return result;
     }
 
-    protected virtual Task<IVolume> CreateDropletVolume(CancellationToken cancellationToken = default)
+    protected virtual Task<IVolume> CreateDropletVolume(StageContext context, CancellationToken cancellationToken = default)
     {
         var dropletVolume = new VolumeBuilder()
             // .WithCleanUp(false)
@@ -167,7 +170,9 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
             cancellationToken = new CancellationTokenSource(DefaultStagingTimeout).Token;
         }
         
-        var containerBuilder = StagingContainerConfigurer(CommonContainerConfigurer(new(), context)); 
+        var containerBuilder = new ContainerBuilder();
+        containerBuilder = CommonContainerConfigurer(containerBuilder, context);
+        containerBuilder = StagingContainerConfigurer(containerBuilder, context);
         if (!context.ApplicationDirectory.Exists())
             throw new InvalidOperationException("Application directory doesn't exist");
         if (context.LifecycleDirectory == null || !context.LifecycleDirectory.Exists())
@@ -187,16 +192,24 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
             stageCommand.Add("-skipDetect");
         }
 
-        var dropletVolume = await CreateDropletVolume(cancellationToken);
+        var dropletVolume = await CreateDropletVolume(context, cancellationToken);
 
-
+        // var permissionsContainer = CommonContainerConfigurer(new ContainerBuilder(), context)
+        //     .WithImage(KnownImages.Cflinuxfs4)
+        //     .WithVolumeMount(dropletVolume, RemoteHome, AccessMode.ReadWrite)
+        //     .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
+        //     .WithCommand("/bin/bash", "-c", "chown vcap:vcap /home/vcap/app")
+        //     .Build();
+        //
+        // await permissionsContainer.StartAsync(cancellationToken);
+        // await permissionsContainer.GetExitCodeAsync(cancellationToken);
         
         containerBuilder = containerBuilder
                 .WithCommand(stageCommand.ToArray())
                 // .WithVolumeMount(dropletVolume, (RemoteTemp / "droplet").AsLinuxPath(), AccessMode.ReadWrite)
                 .WithVolumeMount(dropletVolume, RemoteTemp / "droplet", AccessMode.ReadWrite)
                 // .WithResourceMapping(new DirectoryInfo(context.CacheDirectory), (RemoteTemp / "cache").AsLinuxPath())
-                .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
+                // .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteHome / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
                 // .WithBindMount(context.DropletDirectory,  RemoteTemp / "droplet")
             ;
         containerBuilder = context.ContainerCustomizer?.Invoke(containerBuilder) ?? containerBuilder;
@@ -236,7 +249,7 @@ public abstract class ContainersPlatformFixture : IAsyncLifetime
         
     }
 
-    internal abstract Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, CancellationToken cancellationToken = default);
+    internal abstract Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, bool unpack = true, CancellationToken cancellationToken = default);
 
     public async Task<LaunchResult> Push(StageContext context, ITestOutputHelper output)
     {

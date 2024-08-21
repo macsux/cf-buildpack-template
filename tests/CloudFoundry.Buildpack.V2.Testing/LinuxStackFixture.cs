@@ -2,6 +2,7 @@
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Images;
 using DotNet.Testcontainers.Volumes;
+using Nuke.Common.Tooling;
 
 namespace CloudFoundry.Buildpack.V2.Testing;
 
@@ -29,13 +30,14 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
         LaunchCommand =  [ RemoteTemp / LaunchScriptName ];
         StageCommand =  [ RemoteTemp / StageScriptName ];
     }
-    internal override async Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, CancellationToken cancellationToken = default)
+    internal override async Task<Droplet> GetDroplet(IVolume dropletVolume, AbsolutePath localPath, bool unpack = true, CancellationToken cancellationToken = default)
     {
+        var command = unpack ? "tar -xf /tmp/droplet/droplet.tar -C /droplet && chown -R 1000:1000 /droplet" : "cp /tmp/droplet/droplet.tar /droplet/droplet.tar";
         var container = new ContainerBuilder()
             .WithImage(KnownImages.Cflinuxfs4)
             .WithVolumeMount(dropletVolume, RemoteTemp / "droplet")
             .WithBindMount(localPath,  "/droplet")
-            .WithCommand("sh", "-c", "tar -xf /tmp/droplet/droplet.tar -C /droplet && chown -R root:root /droplet")
+            .WithCommand("sh", "-c", command)
             .WithOutputConsumer(Consume.RedirectStdoutAndStderrToStream(TestContext.TestOutputStream,TestContext.TestOutputStream))
             .Build();
 
@@ -77,12 +79,13 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
 
     protected abstract string TestImageDockerfile { get; }
 
-    protected override async Task<IVolume> CreateDropletVolume(CancellationToken cancellationToken = default)
+    protected override async Task<IVolume> CreateDropletVolume(StageContext context, CancellationToken cancellationToken = default)
     {
-        var dropletVolume = await base.CreateDropletVolume();
+        var dropletVolume = await base.CreateDropletVolume(context, cancellationToken);
         var changeOwner = new ContainerBuilder()
             .WithImage(KnownImages.Cflinuxfs4)
             .WithVolumeMount(dropletVolume, RemoteTemp / "droplet")
+            .WithResourceMapping(new DirectoryInfo(context.ApplicationDirectory), (RemoteTemp / "droplet" / "app").AsLinuxPath(), ReadWriteAndExecutePermissions)
             .WithCommand("/bin/bash", "-c", "chown -R 2000:2000 /tmp/droplet")
             .Build();
         await dropletVolume.CreateAsync(cancellationToken).ConfigureAwait(false);
@@ -116,10 +119,10 @@ public abstract class LinuxStackFixture : ContainersPlatformFixture
     internal  override AbsolutePath RemoteTemp => (AbsolutePath)"/tmp";
     protected override IWaitForContainerOS WaitStrategy => Wait.ForUnixContainer();
 
-    protected override Func<ContainerBuilder, ContainerBuilder> StagingContainerConfigurer => _ => _
+    protected override Func<ContainerBuilder, StageContext, ContainerBuilder> StagingContainerConfigurer => (builder, _) => builder
         .WithResourceMapping(new FileInfo(DirectoryHelper.CurrentAssemblyFolder / StageScriptName), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions);
 
-    protected override Func<ContainerBuilder, ContainerBuilder> LaunchingContainerConfigurer => _ => _
+    protected override Func<ContainerBuilder, LaunchContext, ContainerBuilder> LaunchingContainerConfigurer => (builder, _) => builder
         .WithResourceMapping(new FileInfo(DirectoryHelper.CurrentAssemblyFolder / LaunchScriptName), RemoteTemp.AsLinuxPath(), ReadAndExecutePermissions);
     
 }

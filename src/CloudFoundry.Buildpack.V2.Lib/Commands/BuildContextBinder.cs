@@ -9,11 +9,11 @@ public class BuildContextBinder(Argument<string> buildPath, Argument<string> cac
     {
         return new BuildContext()
         {
-            BuildDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(buildPath)!,
+            BuildDirectory = new WellKnownVariablePath(bindingContext.ParseResult.GetValueForArgument(buildPath), WellKnownVariablePath.HomeDirectory),
             CacheDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(cachePath)!,
-            DependenciesDirectory = (VariablePath)bindingContext.ParseResult.GetValueForArgument(depsPath)!,
+            DependenciesDirectory = new WellKnownVariablePath(bindingContext.ParseResult.GetValueForArgument(depsPath), WellKnownVariablePath.HomeDirectory / "deps"), // (VariablePath)bindingContext.ParseResult.GetValueForArgument(depsPath)!,
             BuildpackIndex = bindingContext.ParseResult.GetValueForArgument(buildpackIndex),
-            IsFinalize = hookName == Lifecycle.Finalize
+            IsFinalize = hookName == Lifecycle.Finalize,
         };
     }
 }

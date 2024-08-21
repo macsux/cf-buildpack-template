@@ -1,15 +1,16 @@
 namespace CloudFoundry.Buildpack.V2;
 
+[PublicAPI]
 public abstract class FinalBuildpack : BuildpackBase
 {
-    public sealed override void Supply(BuildContext context)
+    public sealed override BuildResult Supply(BuildContext context)
     {
-        // do nothing, we always apply in finalize
+        return DoApply(context);
     }
 
-    public sealed override void Finalize(BuildContext context)
+    public override BuildResult Finalize(BuildContext context) 
     {
-        DoApply(context);
+        return new BuildResult();
     }
 
     public override void Release(ReleaseContext context)
